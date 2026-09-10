@@ -1,0 +1,27 @@
+{
+  "name": "mirai-go",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Monorepo foundation for the MiraiGo Japanese learning application",
+  "workspaces": [
+    "frontend",
+    "backend"
+  ],
+  "scripts": {
+    "dev": "concurrently -n frontend,backend -c cyan,yellow \"npm run dev -w frontend\" \"npm run dev -w backend\"",
+    "build": "npm run build -w frontend",
+    "lint": "npm run lint -w frontend && npm run lint -w backend",
+    "test": "npm run test -w frontend && npm run test -w backend",
+    "check": "npm run lint && npm run test && npm run build",
+    "format": "prettier --write .",
+    "format:check": "prettier --check ."
+  },
+  "engines": {
+    "node": ">=22.12.0",
+    "npm": ">=10"
+  },
+  "devDependencies": {
+    "concurrently": "^9.2.1",
+    "prettier": "^3.6.2"
+  }
+}

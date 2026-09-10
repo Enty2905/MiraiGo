@@ -1,0 +1,49 @@
+# Dependencies
+node_modules/
+
+# Build output and reports
+dist/
+coverage/
+.vite/
+.pytest_cache/
+.ruff_cache/
+htmlcov/
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+*.egg-info/
+
+# Environment and local data
+.env
+.env.*
+!.env.example
+*.local
+*.log
+
+# Secrets and local credentials
+*.key
+*.pem
+*.p12
+*.pfx
+.npmrc
+.pypirc
+credentials*.json
+secrets*.json
+
+# Agent instructions and internal product documents
+AGENTS.md
+.agents/
+.codex/
+
+# IDE and OS
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db
+
+# Models are supplied separately
+ai/models/*.pt
+ai/models/*.pth
+ai/models/*.onnx
