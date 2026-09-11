@@ -9,12 +9,52 @@ Nguồn: [brief](project-brief.md), [context](project-context.md),
 xác nhận; brief/context và các hành vi dưới đây chưa được phê duyệt toàn bộ.
 Không dùng feature specification để tự xác nhận yêu cầu của PRD này.
 
-## 2. Mục tiêu và người dùng
+## 2. Khám phá sản phẩm
 
-Người học N5–N1 để thi JLPT, đi học/đi làm gặp khó khăn nhớ từ vựng và Kanji.
-Giá trị đề xuất: kết nối học/tra cứu, luyện nhớ và xem lại phản hồi.
-Hành trình: chọn nội dung → học/tra từ hoặc Kanji → quiz/thẻ → xem mục sai
-hoặc chưa nhớ → quay lại nội dung cần ôn. Chữ viết và trợ lý hỗ trợ hành trình.
+### 2.1 Vấn đề người dùng
+
+Người học tiếng Nhật ở các cấp độ N5–N1 thường gặp khó khăn trong việc:
+- Ghi nhớ từ vựng và Kanji trong thời gian dài.
+- Không biết nên ôn lại nội dung nào sau khi làm bài.
+- Phải sử dụng nhiều công cụ khác nhau cho từ điển, flashcard, quiz và luyện viết.
+- Khó nhận biết kết quả luyện tập của bản thân.
+- Cần giải thích nhanh về nghĩa, cách dùng hoặc cách nhớ Kanji.
+
+### 2.2 Nhu cầu người dùng
+
+Người học cần một hệ thống có thể:
+- Học nội dung theo cấp độ.
+- Tra cứu từ vựng và Kanji.
+- Luyện tập thông qua quiz và flashcards.
+- Luyện nhận dạng chữ viết.
+- Theo dõi nội dung đã học và kết quả luyện tập.
+- Nhận hỗ trợ giải thích trong quá trình học.
+
+### 2.3 Giải pháp đề xuất
+
+MiraiGo là hệ thống hỗ trợ học tiếng Nhật, tích hợp các chức năng học,
+tra cứu, luyện tập, theo dõi tiến độ và các tính năng AI nhằm hỗ trợ
+người học trong quá trình học tập.
+
+### 2.4 Giả thuyết sản phẩm
+
+Nếu các hoạt động học, tra cứu, luyện tập và ôn lại được kết hợp trong
+một hệ thống, người học có thể dễ dàng xác định nội dung cần ôn và duy
+trì quá trình học tập liên tục hơn.
+
+Giả thuyết này cần được kiểm chứng bằng dữ liệu sử dụng thực tế.
+
+### 2.5 Hành trình người dùng
+
+1. Người học đăng nhập.
+2. Chọn cấp độ hoặc nội dung muốn học.
+3. Học bài / tra cứu từ vựng hoặc Kanji.
+4. Làm quiz hoặc luyện flashcard.
+5. Xem kết quả.
+6. Xác định nội dung chưa nhớ hoặc làm sai.
+7. Ôn lại nội dung.
+8. Sử dụng OCR hoặc trợ lý AI khi cần hỗ trợ.
+9. Theo dõi tiến độ học tập.
 
 ## 3. Phạm vi
 
