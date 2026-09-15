@@ -14,6 +14,7 @@ và nhóm chức năng hiện có. Nội dung chi tiết chưa được phê duy
 | P3.1 | [Product requirements](product-requirements.md) | 12 FR/US, AC, 6 NFR, dữ liệu và giới hạn AI |
 | P3.2 | Review trong hội thoại | Không tạo báo cáo review chính thức riêng |
 | P3.3 | [Feature specification](feature-specification.md) | 12 mục hành vi có truy vết, gồm phần đề xuất/chưa đủ quyết định |
+| Chương 3 | [PRD MiraiGo](prd-miraigo-github-template.md) | Bản PRD riêng theo cấu trúc mẫu GitHub, chờ review |
 | Dùng chung | [Quyết định và nguồn](decisions-and-sources.md) | D01–D05, P01–P11, V01–V04, S01–S11, Q01–Q03 |
 
 ## Những lựa chọn đáng đọc trước khi duyệt
