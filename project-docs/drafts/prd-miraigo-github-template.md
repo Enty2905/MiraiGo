@@ -312,20 +312,17 @@ Luồng này truy vết tới PR-08.
 
 ```mermaid
 flowchart TD
-    A[Mở luyện viết] --> B{Chọn đầu vào}
-    B --> C[Vẽ trên canvas]
-    B --> D[Tải ảnh]
-    C --> E[Xem trước và gửi]
-    D --> E
-    E --> F{Đầu vào hợp lệ?}
-    F -- Không --> G[Hiện lỗi và hướng dẫn sửa]
-    F -- Có --> H{AI sẵn sàng?}
-    H -- Không --> I[Thông báo chưa sẵn sàng]
-    H -- Có --> J[Hiện ký tự dự đoán và confidence]
-    G --> B
-    I --> K[Thử lại]
-    K --> H
-    J --> L[Viết lại hoặc kết thúc]
+    A[Mở luyện viết] --> B[Vẽ hoặc tải ảnh]
+    B --> C{Đầu vào hợp lệ?}
+    C -- Không --> D[Báo lỗi]
+    D --> B
+    C -- Có --> E{AI sẵn sàng?}
+    E -- Không --> F[Thông báo chưa sẵn sàng]
+    F --> G[Thử lại]
+    G --> E
+    E -- Có --> H[Hiện ký tự và confidence]
+    H --> I[Viết lại hoặc kết thúc]
+    I -- Viết lại --> B
 ```
 
 Nguyên tắc: không có nhánh lỗi nào dẫn tới kết quả giả; confidence không được
