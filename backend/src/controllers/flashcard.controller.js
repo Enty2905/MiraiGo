@@ -1,0 +1,77 @@
+const {
+  addMyFlashcardSet,
+  getMyFlashcardSet,
+  getMyFlashcardSets,
+  removeMyFlashcardSet,
+  saveMyFlashcardReview,
+} = require('../services/flashcard.service');
+
+async function getMyFlashcardSetsController(req, res, next) {
+  try {
+    const sets = await getMyFlashcardSets(req.authUser.id);
+
+    res.status(200).json({
+      sets,
+    });
+  } catch (error) {
+    next(error);
+  }
+}
+
+async function getMyFlashcardSetController(req, res, next) {
+  try {
+    const flashcardSet = await getMyFlashcardSet(req.authUser.id, req.params.setId);
+
+    res.status(200).json({
+      set: flashcardSet,
+    });
+  } catch (error) {
+    next(error);
+  }
+}
+
+async function createFlashcardSetController(req, res, next) {
+  try {
+    const flashcardSet = await addMyFlashcardSet(req.authUser.id, req.body);
+
+    res.status(201).json({
+      message: 'Đã tạo bộ flashcard.',
+      set: flashcardSet,
+    });
+  } catch (error) {
+    next(error);
+  }
+}
+
+async function deleteFlashcardSetController(req, res, next) {
+  try {
+    await removeMyFlashcardSet(req.authUser.id, req.params.setId);
+
+    res.status(200).json({
+      message: 'Đã xóa bộ flashcard.',
+    });
+  } catch (error) {
+    next(error);
+  }
+}
+
+async function saveFlashcardReviewController(req, res, next) {
+  try {
+    const review = await saveMyFlashcardReview(req.authUser.id, req.params.setId, req.body);
+
+    res.status(200).json({
+      message: 'Da luu ket qua on tap flashcard.',
+      review,
+    });
+  } catch (error) {
+    next(error);
+  }
+}
+
+module.exports = {
+  createFlashcardSetController,
+  deleteFlashcardSetController,
+  getMyFlashcardSetController,
+  getMyFlashcardSetsController,
+  saveFlashcardReviewController,
+};
