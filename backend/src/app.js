@@ -1,38 +1,54 @@
-import cors from 'cors';
-import express from 'express';
-import helmet from 'helmet';
+const cors = require('cors');
+const express = require('express');
+const { pool } = require('./config/db');
+const { authenticateToken, requireAdmin } = require('./middleware/auth.middleware');
+const { errorHandler, notFoundHandler } = require('./middleware/error-handler');
+const { adminRouter } = require('./routes/admin.routes');
+const { assistantRouter } = require('./routes/assistant.routes');
+const { authRouter } = require('./routes/auth.routes');
+const { bookmarkRouter } = require('./routes/bookmark.routes');
+const { dictionaryRouter } = require('./routes/dictionary.routes');
+const { flashcardRouter } = require('./routes/flashcard.routes');
+const { handwritingRouter } = require('./routes/handwriting.routes');
+const { lessonRouter } = require('./routes/lesson.routes');
+const { profileRouter } = require('./routes/profile.routes');
+const { progressRouter } = require('./routes/progress.routes');
 
-import { env } from './config/env.js';
-import { errorHandler, notFoundHandler } from './middleware/error-handler.js';
-import { requestContext } from './middleware/request-context.js';
-import { createHealthRouter } from './routes/health.routes.js';
+const app = express();
 
-export function createApp(options = {}) {
-  const app = express();
+app.use(
+  cors({
+    origin: true,
+  }),
+);
+app.use(express.json({ limit: '6mb' }));
 
-  app.disable('x-powered-by');
-  app.use(requestContext);
-  app.use(helmet());
-  app.use(
-    cors({
-      origin(origin, callback) {
-        if (!origin || env.frontendOrigins.includes(origin)) {
-          callback(null, true);
-          return;
-        }
-        const error = new Error('Origin is not allowed by CORS');
-        error.status = 403;
-        error.code = 'CORS_ORIGIN_DENIED';
-        callback(error);
-      },
-    }),
-  );
-  app.use(express.json({ limit: '1mb' }));
+app.get('/api/health', async (req, res, next) => {
+  try {
+    await pool.query('SELECT 1');
 
-  app.use('/api/v1/health', createHealthRouter(options));
+    res.status(200).json({
+      status: 'ok',
+    });
+  } catch (error) {
+    next(error);
+  }
+});
 
-  app.use(notFoundHandler);
-  app.use(errorHandler);
+app.use('/api/auth', authRouter);
+app.use('/api/admin', authenticateToken, requireAdmin, adminRouter);
+app.use('/api/assistant', authenticateToken, assistantRouter);
+app.use('/api/dictionary', dictionaryRouter);
+app.use('/api/lessons', lessonRouter);
+app.use('/api/profile', authenticateToken, profileRouter);
+app.use('/api/progress', authenticateToken, progressRouter);
+app.use('/api/bookmarks', authenticateToken, bookmarkRouter);
+app.use('/api/flashcards', authenticateToken, flashcardRouter);
+app.use('/api/handwriting', authenticateToken, handwritingRouter);
 
-  return app;
-}
+app.use(notFoundHandler);
+app.use(errorHandler);
+
+module.exports = {
+  app,
+};

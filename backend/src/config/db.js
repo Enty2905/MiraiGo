@@ -1,33 +1,16 @@
-import pg from 'pg';
+const { Pool } = require('pg');
+require('dotenv').config();
 
-import { env } from './env.js';
+const pool = new Pool({
+  host: process.env.DB_HOST,
+  port: Number(process.env.DB_PORT),
+  database: process.env.DB_NAME,
+  user: process.env.DB_USER,
+  password: process.env.DB_PASSWORD,
+  max: 10,
+  idleTimeoutMillis: 30000,
+});
 
-const { Pool } = pg;
-let pool;
-
-export function getPool() {
-  if (!env.databaseUrl) {
-    throw new Error('DATABASE_URL is not configured');
-  }
-
-  pool ??= new Pool({
-    connectionString: env.databaseUrl,
-    max: 10,
-    idleTimeoutMillis: 30_000,
-    connectionTimeoutMillis: env.dependencyTimeoutMs,
-  });
-
-  return pool;
-}
-
-export async function checkDatabase() {
-  const result = await getPool().query('SELECT 1 AS connected');
-  return result.rows[0]?.connected === 1;
-}
-
-export async function closeDatabase() {
-  if (pool) {
-    await pool.end();
-    pool = undefined;
-  }
-}
+module.exports = {
+  pool,
+};

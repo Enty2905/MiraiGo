@@ -1,27 +1,23 @@
-export function notFoundHandler(request, response) {
-  response.status(404).json({
-    error: {
-      code: 'ROUTE_NOT_FOUND',
-      message: `No route matches ${request.method} ${request.originalUrl}`,
-      requestId: request.id,
-    },
+function notFoundHandler(req, res) {
+  res.status(404).json({
+    message: 'Không tìm thấy endpoint.',
   });
 }
 
-export function errorHandler(error, request, response, _next) {
-  void _next;
-  const status = Number.isInteger(error.status) ? error.status : 500;
-  const exposeMessage = status < 500;
-
-  if (status >= 500) {
-    console.error(`[${request.id}]`, error);
+function errorHandler(error, req, res, next) {
+  if (res.headersSent) {
+    return next(error);
   }
 
-  response.status(status).json({
-    error: {
-      code: error.code || 'INTERNAL_SERVER_ERROR',
-      message: exposeMessage ? error.message : 'An unexpected error occurred',
-      requestId: request.id,
-    },
+  const status = Number.isInteger(error.status) ? error.status : 500;
+  const message = status >= 500 ? 'Lỗi máy chủ nội bộ.' : error.message;
+
+  return res.status(status).json({
+    message,
   });
 }
+
+module.exports = {
+  notFoundHandler,
+  errorHandler,
+};
