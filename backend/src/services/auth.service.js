@@ -1,0 +1,106 @@
+const { createUser, findUserByEmail } = require('../models/user.model');
+const { createHttpError } = require('../utils/http-error');
+const { hashPassword, verifyPassword } = require('../utils/password');
+const { createAccessToken } = require('../utils/token');
+
+function normalizeEmail(email) {
+  return typeof email === 'string' ? email.trim().toLowerCase() : '';
+}
+
+function normalizeFullName(fullName) {
+  return typeof fullName === 'string' ? fullName.trim() : '';
+}
+
+function validatePassword(password) {
+  return typeof password === 'string' && password.length >= 6;
+}
+
+function validateRegisterPayload({ fullName, email, password }) {
+  if (!fullName) {
+    throw createHttpError(400, 'Vui lòng nhập họ và tên.');
+  }
+
+  if (!email) {
+    throw createHttpError(400, 'Vui lòng nhập email.');
+  }
+
+  if (!validatePassword(password)) {
+    throw createHttpError(400, 'Mật khẩu phải có ít nhất 6 ký tự.');
+  }
+}
+
+function sanitizeUser(user) {
+  return {
+    id: user.id,
+    email: user.email,
+    fullName: user.fullName,
+    displayName: user.displayName,
+    role: user.role,
+    status: user.status,
+    timezone: user.timezone,
+  };
+}
+
+async function registerUser({ name, email, password }) {
+  const normalizedEmail = normalizeEmail(email);
+  const normalizedFullName = normalizeFullName(name);
+
+  validateRegisterPayload({
+    fullName: normalizedFullName,
+    email: normalizedEmail,
+    password,
+  });
+
+  const existingUser = await findUserByEmail(normalizedEmail);
+  if (existingUser) {
+    throw createHttpError(409, 'Email này đã được đăng ký.');
+  }
+
+  const passwordHash = await hashPassword(password);
+  const user = await createUser({
+    email: normalizedEmail,
+    passwordHash,
+    fullName: normalizedFullName,
+  });
+
+  return {
+    user: sanitizeUser(user),
+    token: createAccessToken(user),
+  };
+}
+
+async function loginUser({ email, password }) {
+  const normalizedEmail = normalizeEmail(email);
+
+  if (!normalizedEmail) {
+    throw createHttpError(400, 'Vui lòng nhập email.');
+  }
+
+  if (!password) {
+    throw createHttpError(400, 'Vui lòng nhập mật khẩu.');
+  }
+
+  const user = await findUserByEmail(normalizedEmail);
+  if (!user) {
+    throw createHttpError(401, 'Email hoặc mật khẩu không đúng.');
+  }
+
+  const isValidPassword = await verifyPassword(password, user.passwordHash);
+  if (!isValidPassword) {
+    throw createHttpError(401, 'Email hoặc mật khẩu không đúng.');
+  }
+
+  if (user.status !== 'active') {
+    throw createHttpError(403, 'Tài khoản này hiện không được phép đăng nhập.');
+  }
+
+  return {
+    user: sanitizeUser(user),
+    token: createAccessToken(user),
+  };
+}
+
+module.exports = {
+  registerUser,
+  loginUser,
+};
