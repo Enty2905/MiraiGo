@@ -281,7 +281,7 @@ function LessonQuiz({
           isCorrect: question.isCorrect,
         })),
       })
-      onCompleted()
+      await onCompleted()
     } catch (error) {
       setQuizErrorMessage(error.message)
     } finally {
@@ -491,7 +491,11 @@ export function LessonDetailPage() {
 
   const previousLessonId = `${level}-l${parsedLessonNumber - 1}`
   const isLocked =
+    !isLoading &&
     !isProgressLoading &&
+    !errorMessage &&
+    !progressErrorMessage &&
+    Boolean(lesson) &&
     parsedLessonNumber > 1 &&
     !completedLessons.has(previousLessonId)
 
@@ -561,7 +565,7 @@ export function LessonDetailPage() {
     try {
       await markLessonCompleted(lesson.id)
     } catch (error) {
-      setCompleteErrorMessage(error.message)
+      setCompleteErrorMessage(`Chưa lưu được trạng thái hoàn thành bài học. ${error.message} Bạn có thể thử lại bằng nút bên dưới.`)
     } finally {
       setIsCompleting(false)
     }
@@ -651,8 +655,12 @@ export function LessonDetailPage() {
               level={level}
               lessonNumber={parsedLessonNumber}
               questions={quizQuestions}
-              onCompleted={() => markLessonCompleted(lesson.id).catch(() => {})}
+              onCompleted={handleMarkComplete}
             />
+
+            {completeErrorMessage ? (
+              <p role="alert" className="lessons-feedback lessons-feedback--error">{completeErrorMessage}</p>
+            ) : null}
 
             <button
               type="button"
@@ -666,13 +674,12 @@ export function LessonDetailPage() {
                   ? 'Đã hoàn thành'
                   : isCompleting
                     ? 'Đang lưu...'
-                    : 'Đánh dấu hoàn thành'}
+                    : completeErrorMessage
+                      ? 'Thử lưu hoàn thành lại'
+                      : 'Đánh dấu hoàn thành'}
               </span>
             </button>
 
-            {completeErrorMessage ? (
-              <p role="alert" className="lessons-feedback lessons-feedback--error">{completeErrorMessage}</p>
-            ) : null}
           </div>
 
           <aside className="lesson-vocabulary-sidebar">

@@ -459,7 +459,7 @@ function FlashcardSetsView({
       {isLoading ? <p role="status" className="flashcards-status">Đang tải bộ thẻ...</p> : null}
       {!isLoading && errorMessage ? <p role="alert" className="flashcards-status flashcards-status--error">{errorMessage}</p> : null}
 
-      {!isLoading ? (
+      {!isLoading && !errorMessage ? (
         <section className="flashcards-set-list" aria-label="Các bộ flash card">
           {sets.map((flashcardSet) => (
             <FlashcardSetCard
@@ -485,6 +485,7 @@ function StudySummary({
   reviewMessage,
   reviewErrorMessage,
   onRestart,
+  onRetrySave,
 }) {
   return (
     <section className="flashcards-summary">
@@ -506,9 +507,16 @@ function StudySummary({
       {isSavingReview ? <p role="status" className="flashcards-status">Đang lưu kết quả ôn tập...</p> : null}
       {!isSavingReview && reviewMessage ? <p role="status" className="flashcards-status">{reviewMessage}</p> : null}
       {!isSavingReview && reviewErrorMessage ? (
-        <p role="alert" className="flashcards-status flashcards-status--error">{reviewErrorMessage}</p>
+        <div>
+          <p role="alert" className="flashcards-status flashcards-status--error">
+            Chưa lưu được kết quả. {reviewErrorMessage} Kết quả phiên này vẫn được giữ để thử lại; đừng tải lại hoặc rời trang.
+          </p>
+          <button type="button" className="flashcards-primary-btn" onClick={onRetrySave}>
+            Thử lưu lại
+          </button>
+        </div>
       ) : null}
-      <button type="button" className="flashcards-primary-btn" onClick={onRestart}>
+      <button type="button" className="flashcards-primary-btn" disabled={isSavingReview} onClick={onRestart}>
         Xem lại bộ thẻ
       </button>
     </section>
@@ -705,6 +713,7 @@ function FlashcardSetDetailView({
           reviewMessage={reviewMessage}
           reviewErrorMessage={reviewErrorMessage}
           onRestart={onRestart}
+          onRetrySave={() => onSaveReview(studyState.reviewResults)}
         />
       ) : null}
 
@@ -865,6 +874,14 @@ export function FlashcardsPage() {
   }
 
   const handleRestartStudy = () => {
+    if (isSavingReview) {
+      return
+    }
+
+    if (reviewErrorMessage && !window.confirm('Kết quả ôn tập chưa được lưu thành công. Bỏ kết quả phiên này và ôn lại từ đầu?')) {
+      return
+    }
+
     setStudyState({
       currentIndex: 0,
       isFlipped: false,
@@ -877,7 +894,7 @@ export function FlashcardsPage() {
   }
 
   const handleSaveReview = async (results) => {
-    if (!setId || results.length === 0) {
+    if (isSavingReview || !setId || results.length === 0) {
       return
     }
 
