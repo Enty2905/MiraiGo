@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link, Navigate, useNavigate, useParams } from 'react-router-dom'
 import { Dialog } from '../../components/ui/dialog'
+import { FlashcardGame } from '../../components/flashcards/flashcard-game'
 import { DashboardNav } from '../../components/dashboard/dashboard-nav'
 import { useAuthSession } from '../../hooks/use-auth-session'
 import {
@@ -598,6 +599,7 @@ function FlashcardSetDetailView({
   studyState,
   setStudyState,
 }) {
+  const [practiceMode, setPracticeMode] = useState('cards')
   const cards = flashcardSet?.cards || []
   const currentCard = cards[studyState.currentIndex]
   const knownCount = studyState.knownIds.length
@@ -687,7 +689,25 @@ function FlashcardSetDetailView({
         <p className="flashcards-empty-state">Bộ này chưa có thẻ.</p>
       ) : null}
 
-      {!isLoading && flashcardSet && currentCard && !isFinished ? (
+      {!isLoading && !errorMessage && cards.length > 0 ? (
+        <div className="flashcard-modes" role="group" aria-label="Chế độ ôn tập">
+          {[['cards', 'Ôn flashcard'], ['match', 'Ghép cặp'], ['choice', 'Chọn đáp án']].map(([mode, label]) => (
+            <button key={mode} type="button" aria-pressed={practiceMode === mode} disabled={isSavingReview}
+              className={`ui-button${practiceMode === mode ? '' : ' ui-button--secondary'}`}
+              onClick={() => {
+                if (mode === practiceMode) return
+                if (practiceMode !== 'cards' && !window.confirm('Đổi chế độ sẽ kết thúc lượt chơi hiện tại. Tiếp tục?')) return
+                setPracticeMode(mode)
+              }}>{label}</button>
+          ))}
+        </div>
+      ) : null}
+
+      {!isLoading && !errorMessage && cards.length > 0 && practiceMode !== 'cards' ? (
+        <FlashcardGame key={`${flashcardSet.id}-${practiceMode}`} cards={cards} mode={practiceMode} />
+      ) : null}
+
+      {practiceMode === 'cards' && !isLoading && flashcardSet && currentCard && !isFinished ? (
         <StudyCard
           card={currentCard}
           currentIndex={studyState.currentIndex}
@@ -704,7 +724,7 @@ function FlashcardSetDetailView({
         />
       ) : null}
 
-      {!isLoading && flashcardSet && isFinished ? (
+      {practiceMode === 'cards' && !isLoading && flashcardSet && isFinished ? (
         <StudySummary
           knownCount={knownCount}
           unknownCount={unknownCount}
@@ -717,7 +737,7 @@ function FlashcardSetDetailView({
         />
       ) : null}
 
-      {!isLoading && flashcardSet && cards.length > 0 ? (
+      {practiceMode === 'cards' && !isLoading && flashcardSet && cards.length > 0 ? (
         <section className="flashcards-detail-list">
           <div className="flashcards-detail-list-head">
             <h2>Thuật ngữ trong bộ này</h2>
@@ -928,6 +948,7 @@ export function FlashcardsPage() {
 
       {setId ? (
         <FlashcardSetDetailView
+          key={setId}
           flashcardSet={activeSet}
           isLoading={isPageLoading}
           errorMessage={errorMessage || (!isPageLoading && !activeSet ? 'Không tìm thấy bộ thẻ này.' : '')}

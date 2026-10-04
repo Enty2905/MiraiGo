@@ -1,0 +1,29 @@
+.flashcard-modes { display: flex; flex-wrap: wrap; gap: 10px; margin: 24px 0; }
+.flashcard-game { background: var(--panel-bg); border: 1px solid var(--stroke); border-radius: 12px; padding: clamp(16px, 4vw, 36px); margin-block: 24px; }
+.game-heading { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; }
+.game-heading h2 { margin: 6px 0; }
+.game-tag { padding: 6px 12px; border-radius: 20px; background: var(--success-soft); color: var(--success); }
+.game-note { color: var(--text-muted); font-size: 14px; }
+.game-progress { width: 100%; height: 10px; accent-color: var(--success); }
+.game-pairs, .game-options { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+.game-pairs > div { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+.game-pairs h3 { margin-bottom: 0; font-size: 16px; }
+.game-tile { display: flex; align-items: center; gap: 12px; justify-content: center; width: 100%; min-height: 76px; padding: 16px; border: 1px solid var(--stroke-strong); border-radius: 10px; background: var(--panel-bg); overflow-wrap: anywhere; font-size: 18px; }
+.game-tile:not(:disabled):hover, .game-tile.is-selected { background: var(--accent-soft); border-color: var(--accent); }
+.game-tile.is-selected { outline: 2px solid var(--accent); outline-offset: 2px; }
+.game-tile.is-correct { background: var(--success-soft); border-color: var(--success); color: var(--success); opacity: 1; }
+.game-tile.is-wrong { background: var(--error-soft); border-color: var(--error); color: var(--error); opacity: 1; }
+.game-question > h3 { text-align: center; font-size: clamp(24px, 4vw, 38px); padding: 20px 0; }
+.game-option-letter { flex-shrink: 0; font-size: 14px; font-weight: 700; }
+.game-feedback { min-height: 28px; margin: 20px 0; }
+.game-result-stats { display: flex; flex-wrap: wrap; gap: 40px; }
+.game-result-stats strong { display: block; font-size: 32px; color: var(--success); }
+.game-actions { display: flex; flex-wrap: wrap; gap: 12px; }
+.game-review { list-style: none; padding: 0; }
+.game-review li { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; padding: 12px 0; border-bottom: 1px solid var(--stroke); overflow-wrap: anywhere; }
+@media (max-width: 560px) {
+  .game-options { grid-template-columns: 1fr; }
+  .game-pairs { gap: 10px; }
+  .game-tile { padding: 12px 8px; font-size: 16px; }
+  .flashcard-modes > button { flex: 1 1 120px; }
+}
