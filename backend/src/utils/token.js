@@ -3,7 +3,12 @@ const crypto = require('node:crypto');
 const TOKEN_TTL_MS = 7 * 24 * 60 * 60 * 1000;
 
 function getTokenSecret() {
-  return process.env.AUTH_SECRET || 'dev-auth-secret';
+  const secret = process.env.AUTH_SECRET?.trim();
+  if (secret) return secret;
+  if (process.env.NODE_ENV === 'production') {
+    throw new Error('AUTH_SECRET must be configured in production.');
+  }
+  return 'dev-auth-secret';
 }
 
 function createAccessToken(user) {
@@ -30,8 +35,10 @@ function verifyAccessToken(token) {
     return null;
   }
 
-  const [encodedPayload, signature] = token.split('.');
-  if (!encodedPayload || !signature) {
+  const parts = token.split('.');
+  if (parts.length !== 2) return null;
+  const [encodedPayload, signature] = parts;
+  if (!/^[A-Za-z0-9_-]+$/.test(encodedPayload) || !/^[A-Za-z0-9_-]{43}$/.test(signature)) {
     return null;
   }
 
@@ -55,7 +62,14 @@ function verifyAccessToken(token) {
     const payloadText = Buffer.from(encodedPayload, 'base64url').toString('utf8');
     const payload = JSON.parse(payloadText);
 
-    if (typeof payload.exp !== 'number' || payload.exp <= Date.now()) {
+    if (
+      !payload || typeof payload !== 'object' || Array.isArray(payload) ||
+      !/^[1-9]\d*$/.test(String(payload.sub)) ||
+      typeof payload.email !== 'string' || !payload.email.trim() ||
+      !['student', 'teacher', 'admin'].includes(payload.role) ||
+      !Number.isFinite(payload.iat) || !Number.isFinite(payload.exp) ||
+      payload.iat > Date.now() || payload.exp <= payload.iat || payload.exp <= Date.now()
+    ) {
       return null;
     }
 
