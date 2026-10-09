@@ -4,6 +4,9 @@ const { promisify } = require('node:util');
 const scryptAsync = promisify(crypto.scrypt);
 
 async function hashPassword(password) {
+  if (typeof password !== 'string' || password.length === 0) {
+    throw new TypeError('Password must be a non-empty string.');
+  }
   const salt = crypto.randomBytes(16).toString('hex');
   const derivedKey = await scryptAsync(password, salt, 64);
 
@@ -11,15 +14,15 @@ async function hashPassword(password) {
 }
 
 async function verifyPassword(password, hashedPassword) {
-  if (typeof hashedPassword !== 'string') {
+  if (
+    typeof password !== 'string' || password.length === 0 ||
+    typeof hashedPassword !== 'string' ||
+    !/^[a-f0-9]{32}:[a-f0-9]{128}$/.test(hashedPassword)
+  ) {
     return false;
   }
 
   const [salt, storedKey] = hashedPassword.split(':');
-  if (!salt || !storedKey) {
-    return false;
-  }
-
   const derivedKey = await scryptAsync(password, salt, 64);
   const storedBuffer = Buffer.from(storedKey, 'hex');
 

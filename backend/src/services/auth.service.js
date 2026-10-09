@@ -76,7 +76,7 @@ async function loginUser({ email, password }) {
     throw createHttpError(400, 'Vui lòng nhập email.');
   }
 
-  if (!password) {
+  if (typeof password !== 'string' || !password) {
     throw createHttpError(400, 'Vui lòng nhập mật khẩu.');
   }
 
