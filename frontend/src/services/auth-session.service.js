@@ -12,7 +12,12 @@ function parseSession(rawValue) {
       return null
     }
 
-    if (!parsedValue.token || !parsedValue.user) {
+    if (
+      Array.isArray(parsedValue) ||
+      typeof parsedValue.token !== 'string' || !parsedValue.token.trim() ||
+      !parsedValue.user || typeof parsedValue.user !== 'object' ||
+      Array.isArray(parsedValue.user)
+    ) {
       return null
     }
 
@@ -35,26 +40,41 @@ export function getAuthSession() {
     return null
   }
 
-  const rawValue = window.localStorage.getItem(AUTH_STORAGE_KEY)
-  return parseSession(rawValue)
+  try {
+    return parseSession(window.localStorage.getItem(AUTH_STORAGE_KEY))
+  } catch {
+    return null
+  }
 }
 
 export function saveAuthSession(sessionData) {
   if (typeof window === 'undefined') {
-    return
+    return false
   }
 
-  window.localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(sessionData))
+  try {
+    const serialized = JSON.stringify(sessionData)
+    if (!parseSession(serialized)) return false
+    window.localStorage.setItem(AUTH_STORAGE_KEY, serialized)
+  } catch {
+    return false
+  }
   notifySessionChanged()
+  return true
 }
 
 export function clearAuthSession() {
   if (typeof window === 'undefined') {
-    return
+    return false
   }
 
-  window.localStorage.removeItem(AUTH_STORAGE_KEY)
+  try {
+    window.localStorage.removeItem(AUTH_STORAGE_KEY)
+  } catch {
+    return false
+  }
   notifySessionChanged()
+  return true
 }
 
 export function subscribeAuthSession(listener) {
