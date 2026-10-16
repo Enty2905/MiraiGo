@@ -13,13 +13,13 @@ until it is explicitly approved.
 | Area         | Stack                        | Local address           | Responsibility                    |
 | ------------ | ---------------------------- | ----------------------- | --------------------------------- |
 | `frontend/`  | React, Vite, Tailwind CSS    | `http://127.0.0.1:5173` | Browser interface                 |
-| `backend/`   | Node.js, Express, PostgreSQL | `http://127.0.0.1:3000` | Main API and integration boundary |
+| `backend/`   | Node.js, Express, PostgreSQL | `http://127.0.0.1:5000` | Main API and integration boundary |
 | `ai/`        | Python, FastAPI              | `http://127.0.0.1:8001` | Handwriting inference boundary    |
 | `rule-code/` | Shared conventions           | —                       | Repository-wide engineering rules |
 
-The frontend proxies `/api` to Express during local development. The backend
-checks PostgreSQL and the FastAPI readiness endpoint without making either
-dependency part of its liveness check.
+The frontend calls `http://localhost:5000/api` by default; set
+`VITE_API_BASE_URL` to use another API URL. The backend's `/api/health` endpoint
+checks PostgreSQL connectivity. See [backend setup](backend/README.md).
 
 ## Prerequisites
 
@@ -44,8 +44,9 @@ docker compose up -d postgres
 npm run db:setup -w backend
 ```
 
-`db:setup` only creates foundational metadata tables. Domain tables will be
-added with approved features instead of being inferred from draft documents.
+Copy the environment example only for a new setup; keep your existing `.env`.
+`db:setup` creates domain tables and inserts or updates sample learning content.
+Use a development database for this command.
 
 ### 3. Start the frontend and backend
 
@@ -53,8 +54,8 @@ added with approved features instead of being inferred from draft documents.
 npm run dev
 ```
 
-The frontend remains usable when optional dependencies are unavailable and
-shows the current API connection state.
+Public pages can be opened without signing in. Account and learning operations
+require a running backend and a configured database.
 
 ### 4. Start the AI service
 
@@ -79,6 +80,10 @@ npm run check
 npm run format:check
 ```
 
+`check` runs frontend ESLint, backend syntax validation, database-independent
+unit tests for both workspaces, and the frontend production build. Database
+connectivity is checked separately with `npm run test:db -w backend`.
+
 Run AI checks from `ai/` after installing its development dependencies:
 
 ```powershell
@@ -88,8 +93,7 @@ Run AI checks from `ai/` after installing its development dependencies:
 
 ## Health endpoints
 
-- `GET http://127.0.0.1:3000/api/v1/health` — Express liveness
-- `GET http://127.0.0.1:3000/api/v1/health/ready` — PostgreSQL and AI readiness
+- `GET http://127.0.0.1:5000/api/health` — PostgreSQL connectivity through Express
 - `GET http://127.0.0.1:8001/health` — FastAPI liveness
 - `GET http://127.0.0.1:8001/ready` — model readiness
 - `GET http://127.0.0.1:8001/docs` — generated OpenAPI interface
