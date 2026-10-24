@@ -3,7 +3,7 @@ import { DashboardNav } from '../../components/dashboard/dashboard-nav'
 import {
   fetchAssistantSessionMessages,
   fetchAssistantSessions,
-  sendAssistantMessage,
+  streamAssistantMessage,
 } from '../../services/assistant.service'
 import { NAV_ITEMS } from '../dashboard/dashboard-content'
 import '../dashboard/dashboard-page.css'
@@ -72,8 +72,12 @@ function AssistantMessage({ message }) {
   return (
     <article className={`assistant-message${isUser ? ' assistant-message--user' : ''}`}>
       <div className="assistant-message__avatar">{isUser ? 'ME' : 'AI'}</div>
-      <div className="assistant-message__body">
-        {renderMessageContent(message.content)}
+      <div className={`assistant-message__body${message.isStreaming ? ' assistant-message__streaming' : ''}`}>
+        {message.content ? (
+          renderMessageContent(message.content)
+        ) : (
+          <p className="assistant-loading-indicator">Đang chuẩn bị câu trả lời...</p>
+        )}
       </div>
     </article>
   )
@@ -218,37 +222,68 @@ export function AssistantPage() {
       sender: 'user',
       content: userContent,
     }
+    const streamingId = `streaming-${Date.now()}`
+    const streamingMessage = {
+      id: streamingId,
+      sender: 'assistant',
+      content: '',
+      isStreaming: true,
+    }
 
-    setMessages((currentMessages) => [...currentMessages, userMessage])
+    setMessages((currentMessages) => [...currentMessages, userMessage, streamingMessage])
     setInputValue('')
     setErrorMessage('')
     setIsSending(true)
 
+    let accumulatedContent = ''
+
     try {
-      const result = await sendAssistantMessage({
+      await streamAssistantMessage({
         message: userContent,
         sessionId,
         level: selectedLevel,
+        onInit: (initEvent) => {
+          if (initEvent.session?.id) {
+            setSessionId(initEvent.session.id)
+            setSessions((currentSessions) => {
+              const hasSession = currentSessions.some((session) => session.id === initEvent.session.id)
+              if (hasSession) {
+                return currentSessions.map((session) =>
+                  session.id === initEvent.session.id ? initEvent.session : session,
+                )
+              }
+              return [initEvent.session, ...currentSessions]
+            })
+          }
+          if (initEvent.sources) setSources(initEvent.sources)
+          if (initEvent.model) setModelName(initEvent.model)
+        },
+        onChunk: (delta) => {
+          accumulatedContent += delta
+          setMessages((currentMessages) =>
+            currentMessages.map((msg) =>
+              msg.id === streamingId
+                ? { ...msg, content: accumulatedContent }
+                : msg,
+            ),
+          )
+        },
+        onDone: (doneEvent) => {
+          setMessages((currentMessages) =>
+            currentMessages.map((msg) =>
+              msg.id === streamingId ? doneEvent.message : msg,
+            ),
+          )
+          if (doneEvent.sources) setSources(doneEvent.sources)
+          if (doneEvent.model) setModelName(doneEvent.model)
+        },
       })
-
-      setSessionId(result.session.id)
-      setSessions((currentSessions) => {
-        const hasSession = currentSessions.some((session) => session.id === result.session.id)
-
-        if (hasSession) {
-          return currentSessions.map((session) => (
-            session.id === result.session.id ? result.session : session
-          ))
-        }
-
-        return [result.session, ...currentSessions]
-      })
-      setMessages((currentMessages) => [...currentMessages, result.message])
-      setSources(result.sources || [])
-      setModelName(result.model || '')
       await refreshSessions()
     } catch (error) {
       setErrorMessage(error.message)
+      setMessages((currentMessages) =>
+        currentMessages.filter((msg) => msg.id !== streamingId || msg.content.length > 0),
+      )
     } finally {
       setIsSending(false)
     }
@@ -320,14 +355,6 @@ export function AssistantPage() {
               {messages.map((message) => (
                 <AssistantMessage key={message.id} message={message} />
               ))}
-              {isSending ? (
-                <article className="assistant-message">
-                  <div className="assistant-message__avatar">AI</div>
-                  <div className="assistant-message__body">
-                    <p>Đang phân tích dữ liệu bài học...</p>
-                  </div>
-                </article>
-              ) : null}
               <div ref={messagesEndRef} aria-hidden="true" />
             </div>
 

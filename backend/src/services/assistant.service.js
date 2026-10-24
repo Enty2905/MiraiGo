@@ -7,6 +7,8 @@ const {
 } = require('../models/assistant.model');
 const {
   createJapaneseTutorCompletion,
+  createJapaneseTutorStream,
+  getGroqModel,
   sanitizeAssistantOutput,
 } = require('./groq.service');
 const { buildRagContext } = require('./rag.service');
@@ -202,8 +204,75 @@ async function getAssistantSessionMessages(userId, sessionIdInput) {
   };
 }
 
+async function* streamAssistantMessage(userId, body) {
+  const message = normalizeMessage(body.message);
+  const sessionId = normalizeSessionId(body.sessionId);
+  const session = await getOrCreateSession(userId, sessionId, message);
+  const [history, ragContext] = await Promise.all([
+    findChatMessages(userId, session.id, RECENT_MESSAGE_LIMIT),
+    buildRagContext({
+      message,
+      selectedLevel: body.level,
+    }),
+  ]);
+
+  yield {
+    type: 'init',
+    session,
+    sources: ragContext.sources,
+    model: getGroqModel(),
+  };
+
+  const groqMessages = buildGroqMessages({
+    history,
+    userMessage: message,
+    ragContext,
+  });
+
+  let fullAssistantText = '';
+
+  for await (const delta of createJapaneseTutorStream(groqMessages, ragContext)) {
+    fullAssistantText += delta;
+    yield {
+      type: 'chunk',
+      delta,
+    };
+  }
+
+  const cleanContent = sanitizeAssistantOutput(fullAssistantText) || 'Xin lỗi, AI chưa tạo được câu trả lời phù hợp.';
+
+  await createChatMessage({
+    sessionId: session.id,
+    sender: 'user',
+    messageText: message,
+    metadata: {
+      level: ragContext.level,
+      ragTerms: ragContext.terms,
+    },
+  });
+
+  const assistantMessage = await createChatMessage({
+    sessionId: session.id,
+    sender: 'assistant',
+    messageText: cleanContent,
+    metadata: {
+      model: getGroqModel(),
+      sources: ragContext.sources,
+    },
+  });
+
+  yield {
+    type: 'done',
+    message: mapMessage(assistantMessage),
+    session,
+    sources: ragContext.sources,
+    model: getGroqModel(),
+  };
+}
+
 module.exports = {
   getAssistantSessionMessages,
   getAssistantSessions,
   sendAssistantMessage,
+  streamAssistantMessage,
 };

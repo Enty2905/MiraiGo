@@ -28,6 +28,9 @@
 .assistant-message__body p { margin: 0 0 12px; }
 .assistant-message--user .assistant-message__body { padding: 12px 16px; border-radius: 8px; background: var(--surface-inset); }
 .assistant-message--user .assistant-message__avatar { background: var(--accent-soft); color: var(--accent); }
+.assistant-message__streaming::after { content: '▍'; display: inline-block; margin-left: 3px; color: var(--accent); animation: assistant-cursor-blink 0.8s infinite; }
+@keyframes assistant-cursor-blink { 0%, 100% { opacity: 1; } 50% { opacity: 0; } }
+.assistant-loading-indicator { color: var(--text-muted); font-style: italic; }
 .assistant-compose { display: flex; align-items: flex-end; gap: 12px; padding: 16px; margin: 0 16px 16px; border: 1px solid var(--stroke-strong); border-radius: 8px; }
 .assistant-compose textarea { min-width: 0; flex: 1; border: 0; resize: vertical; max-height: 180px; min-height: 56px; background: transparent; color: var(--text-main); padding: 4px; }
 .assistant-compose button { width: 44px; height: 44px; border: 0; border-radius: 8px; background: var(--accent); color: var(--on-accent); display: grid; place-items: center; }
