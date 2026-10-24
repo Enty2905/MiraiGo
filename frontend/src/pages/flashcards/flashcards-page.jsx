@@ -600,6 +600,8 @@ function FlashcardSetDetailView({
   setStudyState,
 }) {
   const [practiceMode, setPracticeMode] = useState('cards')
+  const [isGameActive, setIsGameActive] = useState(false)
+  const [pendingMode, setPendingMode] = useState(null)
   const cards = flashcardSet?.cards || []
   const currentCard = cards[studyState.currentIndex]
   const knownCount = studyState.knownIds.length
@@ -691,21 +693,91 @@ function FlashcardSetDetailView({
 
       {!isLoading && !errorMessage && cards.length > 0 ? (
         <div className="flashcard-modes" role="group" aria-label="Chế độ ôn tập">
-          {[['cards', 'Ôn flashcard'], ['match', 'Ghép cặp'], ['choice', 'Chọn đáp án']].map(([mode, label]) => (
+          {[
+            ['cards', 'Ôn flashcard'],
+            ['match', 'Ghép cặp'],
+            ['choice', 'Chọn đáp án'],
+            ['memory', 'Lật thẻ tìm cặp'],
+          ].map(([mode, label]) => (
             <button key={mode} type="button" aria-pressed={practiceMode === mode} disabled={isSavingReview}
               className={`ui-button${practiceMode === mode ? '' : ' ui-button--secondary'}`}
               onClick={() => {
                 if (mode === practiceMode) return
-                if (practiceMode !== 'cards' && !window.confirm('Đổi chế độ sẽ kết thúc lượt chơi hiện tại. Tiếp tục?')) return
+                const isCurrentlyActive = practiceMode === 'cards'
+                  ? (!isFinished && studyState.currentIndex > 0)
+                  : isGameActive
+
+                if (isCurrentlyActive) {
+                  setPendingMode(mode)
+                  return
+                }
+                setIsGameActive(false)
                 setPracticeMode(mode)
               }}>{label}</button>
           ))}
         </div>
       ) : null}
 
-      {!isLoading && !errorMessage && cards.length > 0 && practiceMode !== 'cards' ? (
-        <FlashcardGame key={`${flashcardSet.id}-${practiceMode}`} cards={cards} mode={practiceMode} />
+      {pendingMode !== null ? (
+        <Dialog
+          className="game-switch-dialog"
+          labelledBy="switch-game-title"
+          onClose={() => setPendingMode(null)}
+        >
+          <div className="game-switch-modal-content">
+            <div className="game-switch-icon-wrap" aria-hidden="true">
+              ⚠️
+            </div>
+            <h2 id="switch-game-title">Đổi chế độ luyện tập?</h2>
+            <p>
+              Bạn đang trong một lượt ôn tập chưa hoàn thành. Nếu đổi sang chế độ{' '}
+              <strong>
+                {pendingMode === 'cards'
+                  ? 'Ôn flashcard'
+                  : pendingMode === 'match'
+                  ? 'Ghép cặp'
+                  : pendingMode === 'choice'
+                  ? 'Chọn đáp án'
+                  : 'Lật thẻ tìm cặp'}
+              </strong>
+              , tiến độ của lượt chơi này sẽ bị hủy bỏ.
+            </p>
+            <div className="game-switch-actions">
+              <button
+                type="button"
+                autoFocus
+                className="ui-button ui-button--secondary"
+                onClick={() => setPendingMode(null)}
+              >
+                Tiếp tục chơi
+              </button>
+              <button
+                type="button"
+                className="ui-button ui-button--danger"
+                onClick={() => {
+                  const nextMode = pendingMode
+                  setPendingMode(null)
+                  setIsGameActive(false)
+                  setPracticeMode(nextMode)
+                }}
+              >
+                Xác nhận đổi
+              </button>
+            </div>
+          </div>
+        </Dialog>
       ) : null}
+
+      {!isLoading && !errorMessage && cards.length > 0 && practiceMode !== 'cards' ? (
+        <FlashcardGame
+          key={`${flashcardSet.id}-${practiceMode}`}
+          cards={cards}
+          mode={practiceMode}
+          onActiveChange={setIsGameActive}
+        />
+      ) : null}
+
+
 
       {practiceMode === 'cards' && !isLoading && flashcardSet && currentCard && !isFinished ? (
         <StudyCard

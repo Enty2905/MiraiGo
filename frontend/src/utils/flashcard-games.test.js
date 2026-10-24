@@ -1,8 +1,9 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { makeQuestions, makeRounds, normalizeText, playableCards, shuffle } from './flashcard-games.js'
+import { makeMemoryRounds, makeQuestions, makeRounds, normalizeText, playableCards, shuffle } from './flashcard-games.js'
 
 const cards = Array.from({ length: 13 }, (_, index) => ({ id: index + 1, frontText: `Từ ${index}`, backText: `Nghĩa ${index}` }))
+
 
 test('shuffle preserves every card without mutating the input', () => {
   const original = [...cards]
@@ -51,3 +52,19 @@ test('retrying one mistaken card still uses distractors from the original set', 
   assert.equal(questions[0].options.length, 4)
   assert.ok(questions[0].options.includes(cards[0].backText))
 })
+
+test('memory rounds create pair tiles for each round with at most six pairs', () => {
+  const rounds = makeMemoryRounds(cards, 6, () => 0)
+  assert.equal(rounds.length, 3)
+  assert.equal(rounds[0].cards.length, 6)
+  assert.equal(rounds[0].tiles.length, 12)
+  assert.equal(rounds[2].cards.length, 1)
+  assert.equal(rounds[2].tiles.length, 2)
+
+  const firstTile = rounds[0].tiles[0]
+  assert.ok(firstTile.id)
+  assert.ok(firstTile.cardId)
+  assert.ok(firstTile.text)
+  assert.ok(firstTile.type === 'front' || firstTile.type === 'back')
+})
+

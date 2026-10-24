@@ -45,3 +45,31 @@ export function makeRounds(cards) {
   }
   return rounds
 }
+
+export function makeMemoryRounds(cards, pairsPerRound = 6, random = Math.random) {
+  const deck = shuffle(cards, random)
+  const rounds = []
+  for (let index = 0; index < deck.length; index += pairsPerRound) {
+    const roundCards = deck.slice(index, index + pairsPerRound)
+    const tiles = shuffle(
+      roundCards.flatMap((card) => [
+        {
+          id: `${card.id}-front`,
+          cardId: card.id,
+          text: card.frontText,
+          type: 'front',
+        },
+        {
+          id: `${card.id}-back`,
+          cardId: card.id,
+          text: card.backText,
+          type: 'back',
+        },
+      ]),
+      random,
+    )
+    rounds.push({ cards: roundCards, tiles })
+  }
+  return rounds
+}
+
