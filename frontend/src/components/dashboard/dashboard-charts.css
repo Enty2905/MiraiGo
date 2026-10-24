@@ -1,0 +1,531 @@
+.dashboard-charts-card {
+  border: 1px solid var(--stroke);
+  border-radius: 8px;
+  background: var(--panel-bg);
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.dashboard-charts-header {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+  padding-bottom: 16px;
+  border-bottom: 1px solid var(--stroke);
+}
+
+.dashboard-charts-title {
+  margin: 4px 0 0;
+  font-size: 22px;
+  font-family: var(--font-head);
+  color: var(--text-main);
+}
+
+.dashboard-charts-tabs {
+  display: inline-flex;
+  gap: 6px;
+  background: var(--surface-inset, rgba(148, 163, 184, 0.1));
+  padding: 4px;
+  border-radius: 10px;
+}
+
+.dashboard-charts-tab {
+  padding: 8px 14px;
+  font-size: 13.5px;
+  font-weight: 600;
+  border-radius: 8px;
+  border: none;
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.dashboard-charts-tab:hover {
+  color: var(--text-main);
+}
+
+.dashboard-charts-tab.active {
+  background: var(--panel-bg);
+  color: var(--accent);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+}
+
+/* ==========================================================================
+   Tab 1: Weekly Activity Bar Chart
+   ========================================================================== */
+
+.weekly-chart-summary {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.weekly-stat-badge {
+  padding: 12px 16px;
+  border-radius: 8px;
+  background: var(--surface-inset, rgba(148, 163, 184, 0.08));
+  border: 1px solid var(--stroke);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.weekly-stat-lbl {
+  font-size: 12px;
+  color: var(--text-muted);
+  font-weight: 500;
+}
+
+.weekly-stat-num {
+  font-size: 18px;
+  font-family: var(--font-head);
+  color: var(--text-main);
+}
+
+.weekly-bars-container {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.weekly-bars-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 12px;
+  height: 180px;
+  align-items: flex-end;
+  padding: 10px 0 0;
+}
+
+.weekly-bar-col {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  height: 100%;
+  cursor: pointer;
+  outline: none;
+}
+
+.weekly-bar-track {
+  width: 100%;
+  max-width: 44px;
+  flex: 1;
+  background: var(--surface-inset, rgba(148, 163, 184, 0.12));
+  border-radius: 8px;
+  display: flex;
+  align-items: flex-end;
+  padding: 3px;
+  transition: transform 0.18s ease;
+}
+
+.weekly-bar-col:hover .weekly-bar-track,
+.weekly-bar-col:focus-visible .weekly-bar-track {
+  transform: scaleY(1.03);
+}
+
+.weekly-bar-col.today .weekly-bar-track {
+  border: 1px dashed var(--accent);
+}
+
+.weekly-bar-fill {
+  width: 100%;
+  min-height: 8px;
+  border-radius: 6px;
+  background: linear-gradient(180deg, #60a5fa 0%, #2563eb 100%);
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding-top: 4px;
+  transition: height 0.4s cubic-bezier(0.16, 1, 0.3, 1), background 0.2s ease;
+}
+
+.weekly-bar-col.hovered .weekly-bar-fill {
+  background: linear-gradient(180deg, #38bdf8 0%, #0284c7 100%);
+}
+
+.weekly-bar-val {
+  font-size: 11px;
+  font-weight: 700;
+  color: #fff;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+}
+
+.weekly-bar-label {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-muted);
+}
+
+.weekly-bar-col.today .weekly-bar-label {
+  color: var(--accent);
+  font-weight: 700;
+}
+
+/* Tooltip Panel */
+.weekly-tooltip-panel {
+  min-height: 56px;
+  padding: 12px 16px;
+  border-radius: 8px;
+  background: var(--surface-inset, rgba(148, 163, 184, 0.08));
+  border: 1px solid var(--stroke);
+  display: flex;
+  align-items: center;
+}
+
+.weekly-tooltip-hint {
+  margin: 0;
+  font-size: 13px;
+  color: var(--text-muted);
+}
+
+.weekly-tooltip-content {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.weekly-tooltip-header {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+
+.weekly-tooltip-header strong {
+  font-size: 16px;
+  color: var(--text-main);
+}
+
+.weekly-tooltip-header time {
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.weekly-tooltip-rows {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.weekly-tooltip-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  color: var(--text-main);
+}
+
+.weekly-tooltip-row strong {
+  color: var(--accent);
+}
+
+.legend-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  display: inline-block;
+}
+
+.dot-lesson { background-color: #3b82f6; }
+.dot-quiz { background-color: #10b981; }
+.dot-flashcard { background-color: #8b5cf6; }
+
+/* ==========================================================================
+   Tab 2: JLPT Donut & Distribution
+   ========================================================================== */
+
+.jlpt-chart-layout {
+  display: grid;
+  grid-template-columns: 280px 1fr;
+  gap: 24px;
+  align-items: center;
+}
+
+.jlpt-donut-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 12px;
+  padding: 16px;
+  border-radius: 8px;
+  background: var(--surface-inset, rgba(148, 163, 184, 0.06));
+  border: 1px solid var(--stroke);
+}
+
+.jlpt-donut-svg {
+  filter: drop-shadow(0 2px 8px rgba(37, 99, 235, 0.15));
+}
+
+.jlpt-donut-track {
+  stroke: var(--stroke);
+  opacity: 0.5;
+}
+
+.jlpt-donut-progress {
+  stroke: var(--accent);
+  transition: stroke-dashoffset 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.jlpt-donut-rate {
+  font-size: 26px;
+  font-weight: 800;
+  font-family: var(--font-head);
+  fill: var(--text-main);
+}
+
+.jlpt-donut-sub {
+  font-size: 11px;
+  font-weight: 600;
+  fill: var(--text-muted);
+}
+
+.jlpt-donut-info h3 {
+  margin: 0;
+  font-size: 15px;
+  font-family: var(--font-head);
+  color: var(--text-main);
+}
+
+.jlpt-donut-info p {
+  margin: 4px 0 0;
+  font-size: 13px;
+  color: var(--text-muted);
+  line-height: 1.4;
+}
+
+.jlpt-levels-breakdown {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.jlpt-levels-breakdown h4 {
+  margin: 0;
+  font-size: 15px;
+  font-family: var(--font-head);
+  color: var(--text-main);
+}
+
+.jlpt-bars-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.jlpt-bar-item {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 8px 12px;
+  border-radius: 8px;
+  transition: background-color 0.2s ease;
+}
+
+.jlpt-bar-item:hover,
+.jlpt-bar-item.active {
+  background-color: var(--surface-inset, rgba(148, 163, 184, 0.1));
+}
+
+.jlpt-bar-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.jlpt-bar-tag {
+  font-size: 12px;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 6px;
+}
+
+.jlpt-bar-counts {
+  font-size: 12.5px;
+  color: var(--text-muted);
+}
+
+.jlpt-bar-percent {
+  font-size: 13.5px;
+  font-weight: 700;
+}
+
+.jlpt-bar-bg {
+  width: 100%;
+  height: 8px;
+  background: var(--surface-inset, rgba(148, 163, 184, 0.15));
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.jlpt-bar-fill {
+  height: 100%;
+  border-radius: 4px;
+  transition: width 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* ==========================================================================
+   Tab 3: Skills Mastery Meters
+   ========================================================================== */
+
+.skills-layout {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.skills-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 16px;
+}
+
+.skill-meter-card {
+  display: flex;
+  gap: 14px;
+  padding: 16px;
+  border-radius: 8px;
+  background: var(--surface-inset, rgba(148, 163, 184, 0.06));
+  border: 1px solid var(--stroke);
+  transition: transform 0.15s ease, border-color 0.15s ease;
+}
+
+.skill-meter-card:hover {
+  transform: translateY(-2px);
+  border-color: var(--accent);
+}
+
+.skill-meter-icon {
+  width: 44px;
+  height: 44px;
+  border-radius: 10px;
+  display: grid;
+  place-items: center;
+  font-size: 20px;
+  font-weight: 700;
+  font-family: var(--font-head);
+  flex-shrink: 0;
+}
+
+.kana-icon {
+  background: rgba(236, 72, 153, 0.15);
+  color: #ec4899;
+}
+
+.lesson-icon {
+  background: rgba(59, 130, 246, 0.15);
+  color: #3b82f6;
+}
+
+.vocab-icon {
+  background: rgba(16, 185, 129, 0.15);
+  color: #10b981;
+}
+
+.card-icon {
+  background: rgba(139, 92, 246, 0.15);
+  color: #8b5cf6;
+}
+
+.skill-meter-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.skill-meter-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.skill-meter-header strong {
+  font-size: 14px;
+  color: var(--text-main);
+}
+
+.skill-meter-score {
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--text-muted);
+}
+
+.skill-meter-track {
+  width: 100%;
+  height: 8px;
+  border-radius: 4px;
+  background: var(--surface-inset, rgba(148, 163, 184, 0.15));
+  overflow: hidden;
+}
+
+.skill-meter-fill {
+  height: 100%;
+  border-radius: 4px;
+  transition: width 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.fill-pink { background: linear-gradient(90deg, #ec4899, #f43f5e); }
+.fill-blue { background: linear-gradient(90deg, #3b82f6, #06b6d4); }
+.fill-emerald { background: linear-gradient(90deg, #10b981, #14b8a6); }
+.fill-violet { background: linear-gradient(90deg, #8b5cf6, #a855f7); }
+
+.skill-meter-tip {
+  margin: 2px 0 0;
+  font-size: 12px;
+  color: var(--text-muted);
+  line-height: 1.4;
+}
+
+/* ==========================================================================
+   Responsive
+   ========================================================================== */
+
+@media (max-width: 900px) {
+  .jlpt-chart-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .skills-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 620px) {
+  .dashboard-charts-card {
+    padding: 16px;
+  }
+
+  .dashboard-charts-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .dashboard-charts-tabs {
+    width: 100%;
+    overflow-x: auto;
+  }
+
+  .weekly-bars-grid {
+    gap: 6px;
+    height: 150px;
+  }
+
+  .weekly-tooltip-content {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+}

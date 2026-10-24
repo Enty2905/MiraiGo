@@ -603,10 +603,66 @@ async function syncMasteredKanaBatch(userId, kanaType, characters) {
   return getMasteredKanaCharacters(userId, kanaType);
 }
 
+async function getDailyActivityBreakdown(userId, days = 7) {
+  const query = `
+    SELECT
+      ((logs.created_at AT TIME ZONE COALESCE(users.timezone, 'Asia/Ho_Chi_Minh'))::date)::text AS "date",
+      COUNT(*) FILTER (WHERE logs.activity_type = 'complete_lesson')::int AS "lessons",
+      COUNT(*) FILTER (WHERE logs.activity_type = 'submit_quiz')::int AS "quizzes",
+      COUNT(*) FILTER (WHERE logs.activity_type = 'review_vocabulary')::int AS "flashcards",
+      COUNT(*)::int AS "total"
+    FROM learning_logs logs
+    INNER JOIN users
+      ON users.id = logs.user_id
+    WHERE logs.user_id = $1
+      AND logs.created_at >= (NOW() - ($2 || ' days')::interval)
+    GROUP BY "date"
+    ORDER BY "date" ASC
+  `;
+
+  const { rows } = await pool.query(query, [userId, days]);
+  return rows;
+}
+
+async function getFlashcardCount(userId) {
+  try {
+    const query = `
+      SELECT COUNT(*)::int AS "totalFlashcards"
+      FROM user_flashcards
+      WHERE user_id = $1
+    `;
+    const { rows } = await pool.query(query, [userId]);
+    return rows[0]?.totalFlashcards || 0;
+  } catch {
+    return 0;
+  }
+}
+
+async function getKanaMasterySummary(userId) {
+  try {
+    await ensureKanaProgressTable();
+    const query = `
+      SELECT
+        COUNT(*) FILTER (WHERE kana_type = 'hiragana' AND is_mastered = true)::int AS "hiragana",
+        COUNT(*) FILTER (WHERE kana_type = 'katakana' AND is_mastered = true)::int AS "katakana",
+        COUNT(*) FILTER (WHERE is_mastered = true)::int AS "total"
+      FROM user_kana_progress
+      WHERE user_id = $1
+    `;
+    const { rows } = await pool.query(query, [userId]);
+    return rows[0] || { hiragana: 0, katakana: 0, total: 0 };
+  } catch {
+    return { hiragana: 0, katakana: 0, total: 0 };
+  }
+}
+
 module.exports = {
   completeLessonProgress,
   createLearningLog,
   getCompletedLessonSlugs,
+  getDailyActivityBreakdown,
+  getFlashcardCount,
+  getKanaMasterySummary,
   getLearningActivityDates,
   getLessonProgressSummary,
   getLevelProgressRows,

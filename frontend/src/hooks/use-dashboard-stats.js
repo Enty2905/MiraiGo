@@ -10,6 +10,7 @@ const DEFAULT_ACTIVITY = Object.freeze({
   activeDays: 0,
   recentActivities: [],
   levelProgress: [],
+  dailyBreakdown: [],
 })
 
 const DEFAULT_STATS = Object.freeze({
@@ -17,6 +18,8 @@ const DEFAULT_STATS = Object.freeze({
   wordsUnlocked: 0,
   flashcardsCreated: 0,
   studyStreak: 0,
+  kanaMastered: 0,
+  overview: null,
   learningActivity: DEFAULT_ACTIVITY,
 })
 
@@ -26,11 +29,14 @@ function createDefaultStats() {
     wordsUnlocked: DEFAULT_STATS.wordsUnlocked,
     flashcardsCreated: DEFAULT_STATS.flashcardsCreated,
     studyStreak: DEFAULT_STATS.studyStreak,
+    kanaMastered: DEFAULT_STATS.kanaMastered,
+    overview: null,
     learningActivity: {
       completedThisWeek: DEFAULT_ACTIVITY.completedThisWeek,
       activeDays: DEFAULT_ACTIVITY.activeDays,
       recentActivities: [],
       levelProgress: [],
+      dailyBreakdown: [],
     },
   }
 }
@@ -48,6 +54,9 @@ function normalizeLearningActivity(activity, overview) {
       : Array.isArray(overview?.levelProgress)
         ? overview.levelProgress
         : [],
+    dailyBreakdown: Array.isArray(activity?.dailyBreakdown)
+      ? activity.dailyBreakdown
+      : [],
   }
 }
 
@@ -57,8 +66,10 @@ function mapProgressOverviewToStats(overview, activity) {
   return {
     lessonsCompleted: overview?.lessons?.completed || 0,
     wordsUnlocked: overview?.vocabulary?.tracked || 0,
-    flashcardsCreated: 0,
+    flashcardsCreated: overview?.flashcards?.total || 0,
+    kanaMastered: overview?.kana?.total || 0,
     studyStreak: activity?.studyStreak ?? overview?.activity?.studyStreak ?? 0,
+    overview: overview || null,
     learningActivity,
   }
 }

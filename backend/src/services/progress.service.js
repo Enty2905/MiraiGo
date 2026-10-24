@@ -1,19 +1,4 @@
-const {
-  completeLessonProgress,
-  getLearningActivityDates,
-  getCompletedLessonSlugs,
-  getLessonProgressSummary,
-  getLevelProgressRows,
-  getRecentLearningLogs,
-  getUserLocalToday,
-  getVocabularyProgressSummary,
-  getKanjiProgressSummary,
-  getWeeklyCompletedLessonCount,
-  saveLessonQuizProgress,
-  getMasteredKanaCharacters,
-  toggleMasteredKana,
-  syncMasteredKanaBatch,
-} = require('../models/progress.model');
+const progressModel = require('../models/progress.model');
 const { createHttpError } = require('../utils/http-error');
 
 const SUPPORTED_LEVELS = new Set(['n1', 'n2', 'n3', 'n4', 'n5']);
@@ -50,6 +35,37 @@ function calculateStudyStreak(activityDates, today) {
   }
 
   return streak;
+}
+
+function buildSevenDayHistory(todayStr, rawRows) {
+  const rowMap = new Map();
+  for (const row of rawRows) {
+    rowMap.set(row.date, row);
+  }
+
+  const DAY_NAMES = ['CN', 'T2', 'T3', 'T4', 'T5', 'T6', 'T7'];
+  const today = todayStr ? new Date(`${todayStr}T00:00:00Z`) : new Date();
+  const days = [];
+
+  for (let i = 6; i >= 0; i--) {
+    const d = new Date(today);
+    d.setUTCDate(today.getUTCDate() - i);
+    const dateStr = d.toISOString().slice(0, 10);
+    const dayOfWeek = d.getUTCDay();
+    const dayLabel = DAY_NAMES[dayOfWeek];
+
+    const matched = rowMap.get(dateStr) || {};
+    days.push({
+      date: dateStr,
+      dayLabel,
+      lessons: normalizeNumber(matched.lessons),
+      quizzes: normalizeNumber(matched.quizzes),
+      flashcards: normalizeNumber(matched.flashcards),
+      total: normalizeNumber(matched.total),
+    });
+  }
+
+  return days;
 }
 
 function createActivityTitle(row) {
@@ -145,14 +161,18 @@ async function getProgressOverview(userId) {
     today,
     weeklyLessonSummary,
     levelProgressRows,
+    flashcardCount,
+    kanaSummary,
   ] = await Promise.all([
-    getLessonProgressSummary(userId),
-    getVocabularyProgressSummary(userId),
-    getKanjiProgressSummary(userId),
-    getLearningActivityDates(userId),
-    getUserLocalToday(userId),
-    getWeeklyCompletedLessonCount(userId),
-    getLevelProgressRows(userId),
+    progressModel.getLessonProgressSummary(userId),
+    progressModel.getVocabularyProgressSummary(userId),
+    progressModel.getKanjiProgressSummary(userId),
+    progressModel.getLearningActivityDates(userId),
+    progressModel.getUserLocalToday(userId),
+    progressModel.getWeeklyCompletedLessonCount(userId),
+    progressModel.getLevelProgressRows(userId),
+    progressModel.getFlashcardCount(userId),
+    progressModel.getKanaMasterySummary(userId),
   ]);
   const studyStreak = calculateStudyStreak(activityDates, today);
 
@@ -171,6 +191,14 @@ async function getProgressOverview(userId) {
       tracked: normalizeNumber(kanjiSummary.trackedKanji),
       mastered: normalizeNumber(kanjiSummary.masteredKanji),
     },
+    flashcards: {
+      total: normalizeNumber(flashcardCount),
+    },
+    kana: {
+      hiragana: normalizeNumber(kanaSummary.hiragana),
+      katakana: normalizeNumber(kanaSummary.katakana),
+      total: normalizeNumber(kanaSummary.total),
+    },
     activity: {
       studyStreak,
       activeDays: activityDates.length,
@@ -186,12 +214,14 @@ async function getLearningActivity(userId) {
     weeklyLessonSummary,
     recentRows,
     levelProgressRows,
+    dailyBreakdownRows,
   ] = await Promise.all([
-    getLearningActivityDates(userId),
-    getUserLocalToday(userId),
-    getWeeklyCompletedLessonCount(userId),
-    getRecentLearningLogs(userId, RECENT_ACTIVITY_LIMIT),
-    getLevelProgressRows(userId),
+    progressModel.getLearningActivityDates(userId),
+    progressModel.getUserLocalToday(userId),
+    progressModel.getWeeklyCompletedLessonCount(userId),
+    progressModel.getRecentLearningLogs(userId, RECENT_ACTIVITY_LIMIT),
+    progressModel.getLevelProgressRows(userId),
+    progressModel.getDailyActivityBreakdown(userId, 7),
   ]);
 
   return {
@@ -200,17 +230,18 @@ async function getLearningActivity(userId) {
     activeDays: activityDates.length,
     recentActivities: recentRows.map(mapRecentActivity),
     levelProgress: levelProgressRows.map(mapLevelProgress),
+    dailyBreakdown: buildSevenDayHistory(today, dailyBreakdownRows),
   };
 }
 
 async function getCompletedLessons(userId) {
-  return getCompletedLessonSlugs(userId);
+  return progressModel.getCompletedLessonSlugs(userId);
 }
 
 async function markLessonComplete(userId, payload) {
   const level = normalizeLevel(payload?.level);
   const lessonNumber = normalizeLessonNumber(payload?.lessonNumber);
-  const progress = await completeLessonProgress({
+  const progress = await progressModel.completeLessonProgress({
     userId,
     level,
     lessonNumber,
@@ -234,7 +265,7 @@ async function saveLessonQuiz(userId, payload) {
   }
 
   const score = Math.round((correctCount / questionCount) * 100);
-  const progress = await saveLessonQuizProgress({
+  const progress = await progressModel.saveLessonQuizProgress({
     userId,
     level,
     lessonNumber,
@@ -277,15 +308,15 @@ function normalizeKanaCharacter(char) {
 
 async function getKanaProgress(userId, kanaType = null) {
   const normalizedType = kanaType ? normalizeKanaType(kanaType) : null;
-  return getMasteredKanaCharacters(userId, normalizedType);
+  return progressModel.getMasteredKanaCharacters(userId, normalizedType);
 }
 
 async function toggleKanaMastered(userId, payload) {
   const kanaType = normalizeKanaType(payload?.kanaType);
   const character = normalizeKanaCharacter(payload?.character);
 
-  const result = await toggleMasteredKana(userId, kanaType, character);
-  const masteredList = await getMasteredKanaCharacters(userId, kanaType);
+  const result = await progressModel.toggleMasteredKana(userId, kanaType, character);
+  const masteredList = await progressModel.getMasteredKanaCharacters(userId, kanaType);
 
   return {
     kanaType,
@@ -306,7 +337,7 @@ async function syncKanaProgressBatch(userId, payload) {
     .map((c) => c.trim())
     .slice(0, 200);
 
-  const masteredList = await syncMasteredKanaBatch(userId, kanaType, characters);
+  const masteredList = await progressModel.syncMasteredKanaBatch(userId, kanaType, characters);
 
   return {
     kanaType,
