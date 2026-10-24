@@ -72,8 +72,40 @@ async function findUserById(userId) {
   return rows[0] || null;
 }
 
+async function findUserWithPasswordById(userId) {
+  const query = `
+    SELECT
+      id,
+      email,
+      password_hash AS "passwordHash",
+      full_name AS "fullName",
+      role,
+      status
+    FROM users
+    WHERE id = $1
+    LIMIT 1
+  `;
+
+  const { rows } = await pool.query(query, [userId]);
+  return rows[0] || null;
+}
+
+async function updateUserPassword(userId, newPasswordHash) {
+  const query = `
+    UPDATE users
+    SET password_hash = $2, updated_at = NOW()
+    WHERE id = $1
+    RETURNING id, email, full_name AS "fullName"
+  `;
+
+  const { rows } = await pool.query(query, [userId, newPasswordHash]);
+  return rows[0] || null;
+}
+
 module.exports = {
-  findUserByEmail,
   createUser,
+  findUserByEmail,
   findUserById,
+  findUserWithPasswordById,
+  updateUserPassword,
 };

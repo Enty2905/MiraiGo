@@ -9,13 +9,26 @@ function getErrorMessage(error) {
     return error.message
   }
 
-  return 'Không tải được dữ liệu hồ sơ.'
+  return 'Không thực hiện được yêu cầu.'
 }
 
 export async function fetchMyProfile() {
   try {
     const response = await apiClient.get('/profile/me')
     return response.data?.profile || null
+  } catch (error) {
+    throw new Error(getErrorMessage(error), { cause: error })
+  }
+}
+
+export async function changePassword({ currentPassword, newPassword, confirmPassword }) {
+  try {
+    const response = await apiClient.put('/profile/password', {
+      currentPassword,
+      newPassword,
+      confirmPassword,
+    })
+    return response.data
   } catch (error) {
     throw new Error(getErrorMessage(error), { cause: error })
   }
