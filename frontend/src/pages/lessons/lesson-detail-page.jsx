@@ -137,11 +137,22 @@ function normalizeAnswer(value) {
     .replace(/\s+/g, ' ')
 }
 
-function createOptionSet(correctOption, vocabulary, pickValue, seed = 0) {
-  const distractors = []
+const DEFAULT_DISTRACTORS = [
+  'Xin chào',
+  'Cảm ơn bạn',
+  'Tạm biệt',
+  'Học sinh',
+  'Giáo viên',
+  'Trường học',
+  'Sách vở',
+]
 
-  for (const word of vocabulary) {
-    const option = pickValue(word)
+function createOptionSet(correctOption, pool, pickValue, seed = 0, fallbackPool = DEFAULT_DISTRACTORS) {
+  const distractors = []
+  const safePool = Array.isArray(pool) ? pool : []
+
+  for (const item of safePool) {
+    const option = pickValue(item)
 
     if (option && option !== correctOption && !distractors.includes(option)) {
       distractors.push(option)
@@ -152,6 +163,15 @@ function createOptionSet(correctOption, vocabulary, pickValue, seed = 0) {
     }
   }
 
+  if (distractors.length < 3 && Array.isArray(fallbackPool)) {
+    for (const item of fallbackPool) {
+      if (distractors.length >= 3) break
+      if (item && item !== correctOption && !distractors.includes(item)) {
+        distractors.push(item)
+      }
+    }
+  }
+
   const options = [...distractors]
   const insertIndex = seed % (options.length + 1)
   options.splice(insertIndex, 0, correctOption)
@@ -159,9 +179,12 @@ function createOptionSet(correctOption, vocabulary, pickValue, seed = 0) {
   return options
 }
 
-function buildLessonQuiz(vocabulary) {
-  return vocabulary.slice(0, 8).flatMap((word, index) => {
-    const questions = []
+function buildLessonQuiz(vocabulary = [], grammar = []) {
+  const questions = []
+  const safeVocab = Array.isArray(vocabulary) ? vocabulary : []
+  const safeGrammar = Array.isArray(grammar) ? grammar : []
+
+  safeVocab.slice(0, 8).forEach((word, index) => {
     const meaning = word.meaningVi || word.english
 
     if (meaning) {
@@ -171,16 +194,27 @@ function buildLessonQuiz(vocabulary) {
         vocabularyId: word.id,
         prompt: `Chọn nghĩa đúng của "${word.japanese}"`,
         answer: meaning,
-        options: createOptionSet(meaning, vocabulary, (item) => item.meaningVi || item.english, index),
+        options: createOptionSet(meaning, safeVocab, (item) => item.meaningVi || item.english, index),
       })
+
+      if (index % 2 === 1) {
+        questions.push({
+          id: `reverse-${word.id || index}`,
+          type: 'choice',
+          vocabularyId: word.id,
+          prompt: `Từ nào trong tiếng Nhật có nghĩa là "${meaning}"?`,
+          answer: word.japanese,
+          options: createOptionSet(word.japanese, safeVocab, (item) => item.japanese, index + 1),
+        })
+      }
     }
 
-    if (word.romaji) {
+    if (word.romaji && index % 2 === 0) {
       questions.push({
         id: `romaji-${word.id || index}`,
         type: 'text',
         vocabularyId: word.id,
-        prompt: `Nhập romaji/kana của "${word.japanese}"`,
+        prompt: `Nhập romaji hoặc kana của "${word.japanese}"`,
         answer: word.romaji,
         acceptedAnswers: [word.romaji, word.kana].filter(Boolean),
       })
@@ -193,11 +227,64 @@ function buildLessonQuiz(vocabulary) {
       prompt: 'Nghe phát âm rồi chọn từ đúng',
       answer: word.japanese,
       word,
-      options: createOptionSet(word.japanese, vocabulary, (item) => item.japanese, index + 2),
+      options: createOptionSet(word.japanese, safeVocab, (item) => item.japanese, index + 2),
     })
+  })
 
-    return questions
-  }).slice(0, 10)
+  const allExamples = safeGrammar.flatMap((g) => g.examples || [])
+
+  safeGrammar.forEach((item, index) => {
+    if (item.meaningVi) {
+      questions.push({
+        id: `grammar-pattern-${item.id || index}`,
+        type: 'choice',
+        prompt: `Mẫu ngữ pháp "${item.pattern}" diễn đạt ý nghĩa gì?`,
+        answer: item.meaningVi,
+        options: createOptionSet(
+          item.meaningVi,
+          safeGrammar,
+          (g) => g.meaningVi,
+          index,
+          ['Diễn tả hành động trong quá khứ', 'Thể hiện mong muốn hoặc nguyện vọng', 'Diễn tả khả năng làm việc gì đó', 'Dùng để xin phép hoặc cấm đoán'],
+        ),
+      })
+    }
+
+    const firstExample = item.examples?.[0]
+    if (firstExample && firstExample.exampleVi) {
+      questions.push({
+        id: `grammar-ex-${item.id || index}`,
+        type: 'choice',
+        prompt: `Dịch câu ví dụ sau: "${firstExample.exampleJp}"`,
+        answer: firstExample.exampleVi,
+        options: createOptionSet(
+          firstExample.exampleVi,
+          allExamples,
+          (ex) => ex.exampleVi,
+          index + 3,
+          ['Tôi đang học tiếng Nhật', 'Hôm nay trời rất đẹp', 'Xin hãy chỉ giúp tôi', 'Cảm ơn bạn rất nhiều'],
+        ),
+      })
+    }
+  })
+
+  const grammarQs = questions.filter((q) => q.id.startsWith('grammar-'))
+  const vocabQs = questions.filter((q) => !q.id.startsWith('grammar-'))
+
+  const blended = []
+  let vIdx = 0
+  let gIdx = 0
+
+  while ((vIdx < vocabQs.length || gIdx < grammarQs.length) && blended.length < 10) {
+    if (vIdx < vocabQs.length) {
+      blended.push(vocabQs[vIdx++])
+    }
+    if (gIdx < grammarQs.length && blended.length < 10) {
+      blended.push(grammarQs[gIdx++])
+    }
+  }
+
+  return blended
 }
 
 function LessonQuiz({
@@ -477,8 +564,8 @@ export function LessonDetailPage() {
     [lesson],
   )
   const quizQuestions = useMemo(
-    () => buildLessonQuiz(normalizedVocabulary),
-    [normalizedVocabulary],
+    () => buildLessonQuiz(normalizedVocabulary, lesson?.grammar),
+    [normalizedVocabulary, lesson?.grammar],
   )
 
   if (!isValidLessonLevel(level)) {
