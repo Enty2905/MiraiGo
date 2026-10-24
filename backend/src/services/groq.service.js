@@ -39,34 +39,36 @@ function sanitizeAssistantOutput(content) {
 function buildFallbackTutorResponse(messages, ragContext = {}) {
   const lastUserMsg = [...messages].reverse().find((m) => m.role === 'user')?.content || '';
   const level = ragContext.level || 'N5';
-  const terms = Array.isArray(ragContext.terms) ? ragContext.terms : [];
+  const contextText = ragContext.contextText || '';
 
   let response = `Xin chào! Tôi là Trợ lý học tiếng Nhật MiraiGo (trình độ ${level}).\n\n`;
 
-  if (terms.length > 0) {
-    response += `Dữ liệu bài học liên quan đến câu hỏi của bạn:\n`;
-    for (const term of terms.slice(0, 3)) {
-      if (term.word) {
-        response += `- ${term.word} (${term.kana || term.romaji || ''}): ${term.meaningVi || term.meaningEn || ''}\n`;
-      } else if (term.pattern) {
-        response += `- Mẫu ngữ pháp ${term.pattern}: ${term.meaningVi || ''}\n`;
-      }
-    }
-    response += `\n`;
+  if (contextText) {
+    response += `Dữ liệu bài học và từ điển liên quan:\n${contextText}\n\n`;
   }
 
   const queryLower = lastUserMsg.toLowerCase();
-  if (queryLower.includes('chào') || queryLower.includes('konnichiwa') || queryLower.includes('こんにちは')) {
-    response += `Trong tiếng Nhật, lời chào thông dụng vào ban ngày là こんにちは (Konnichiwa). Bạn có thể dùng khi chào hỏi đồng nghiệp, bạn bè hoặc người quen.\n\n`;
-    response += `Vào buổi sáng, hãy dùng おはようございます (Ohayou gozaimasu), và buổi tối dùng こんばんは (Konbanwa).`;
+  if (lastUserMsg.includes('お父さん') || queryLower.includes('otoosan') || queryLower.includes('bố') || queryLower.includes('ba')) {
+    response += `「お父さん」(Otoosan / おとうさん) nghĩa là "bố", "ba", hoặc "cha" trong tiếng Nhật.\n\n` +
+      `- Dùng khi gọi trực tiếp bố của mình: "お父さん、いってきます！" (Bố ơi, con đi đây ạ!)\n` +
+      `- Dùng khi nói về bố của người khác một cách lịch sự.\n` +
+      `- Lưu ý: Khi xưng hô về bố của mình với người ngoài trong giao tiếp khiêm nhường, người Nhật thường dùng từ 「父」(Chichi).\n\n` +
+      `Từ tương ứng cho mẹ là 「お母さん」(Okaasan / mẹ) và 「母」(Haha).`;
+  } else if (lastUserMsg.includes('お母さん') || queryLower.includes('okaasan') || queryLower.includes('mẹ')) {
+    response += `「お母さん」(Okaasan / おかあさん) nghĩa là "mẹ" trong tiếng Nhật.\n\n` +
+      `- Dùng khi gọi trực tiếp mẹ mình hoặc nói về mẹ của người khác.\n` +
+      `- Khi nói về mẹ của mình với người ngoài trong giao tiếp khiêm nhường, dùng 「母」(Haha).`;
+  } else if (queryLower.includes('chào') || queryLower.includes('konnichiwa') || queryLower.includes('こんにちは')) {
+    response += `Trong tiếng Nhật, lời chào thông dụng vào ban ngày là こんにちは (Konnichiwa). Bạn có thể dùng khi chào hỏi đồng nghiệp, bạn bè hoặc người quen.\n\n` +
+      `Vào buổi sáng, hãy dùng おはようございます (Ohayou gozaimasu), và buổi tối dùng こんばんは (Konbanwa).`;
   } else if (queryLower.includes('cảm ơn') || queryLower.includes('arigatou') || queryLower.includes('ありがとう')) {
     response += `Để cảm ơn lịch sự, bạn nên nói: ありがとうございます (Arigatou gozaimasu). Với bạn bè thân thiết, có thể nói ngắn gọn là ありがとう (Arigatou).`;
-  } else if (terms.length === 0) {
-    response += `Về câu hỏi: "${lastUserMsg}"\n\nBạn có thể hỏi cụ thể hơn về từ vựng, ngữ pháp N5–N1, hoặc các bài học để tôi giải thích chi tiết kèm phiên âm và ví dụ.`;
+  } else if (!contextText) {
+    response += `Về câu hỏi: "${lastUserMsg}"\n\nBạn có thể hỏi cụ thể về từ vựng, kanji, mẫu câu ngữ pháp N5–N1, hoặc các bài học trong hệ thống để được giải thích chi tiết.`;
   }
 
   if (!process.env.GROQ_API_KEY) {
-    response += `\n\n(Lưu ý: Để mở khóa câu trả lời trực tiếp từ Groq Cloud LLM, hãy cấu hình GROQ_API_KEY trong file backend/.env)`;
+    response += `\n\n💡 Mẹo: Bạn có thể điền GROQ_API_KEY vào file backend/.env để kích hoạt AI trực tiếp từ Groq Cloud LLM (giải đáp chuyên sâu 100% mọi câu hỏi tiếng Nhật).`;
   }
 
   return response;
