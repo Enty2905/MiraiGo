@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react'
 import { Link, Navigate, useParams } from 'react-router-dom'
 import { CheckIcon, VolumeIcon } from '../../components/hiragana/hiragana-icons'
+import { QuickSaveModal, BookmarkIcon } from '../../components/flashcards/quick-save-modal'
 import { DashboardNav } from '../../components/dashboard/dashboard-nav'
 import { useLessonDetail } from '../../hooks/use-lesson-detail'
 import { useLessonsProgress } from '../../hooks/use-lessons-progress'
@@ -554,6 +555,7 @@ export function LessonDetailPage() {
   } = useLessonsProgress()
   const [isCompleting, setIsCompleting] = useState(false)
   const [completeErrorMessage, setCompleteErrorMessage] = useState('')
+  const [quickSaveWord, setQuickSaveWord] = useState(null)
   const {
     lesson,
     isLoading,
@@ -785,14 +787,26 @@ export function LessonDetailPage() {
                         <div className="lesson-vocabulary-romaji">{word.romaji}</div>
                       </div>
 
-                      <button
-                        type="button"
-                        className="lesson-vocabulary-sound-btn"
-                        onClick={() => playVocabularyWord(word)}
-                        aria-label={`Nghe phát âm ${word.romaji}`}
-                      >
-                        <VolumeIcon className="lesson-vocabulary-sound-icon" />
-                      </button>
+                      <div className="lesson-vocabulary-actions">
+                        <button
+                          type="button"
+                          className="lesson-vocabulary-sound-btn"
+                          onClick={() => playVocabularyWord(word)}
+                          aria-label={`Nghe phát âm ${word.romaji}`}
+                        >
+                          <VolumeIcon className="lesson-vocabulary-sound-icon" />
+                        </button>
+
+                        <button
+                          type="button"
+                          className="lesson-vocabulary-save-btn"
+                          onClick={() => setQuickSaveWord(word)}
+                          aria-label={`Lưu "${word.japanese}" vào flashcard`}
+                          title="Lưu vào Flashcard"
+                        >
+                          <BookmarkIcon className="lesson-vocabulary-save-icon" />
+                        </button>
+                      </div>
                     </div>
 
                     <p className="lesson-vocabulary-meaning">{word.english}</p>
@@ -803,6 +817,14 @@ export function LessonDetailPage() {
           </aside>
         </div>
       </main>
+
+      <QuickSaveModal
+        isOpen={Boolean(quickSaveWord)}
+        onClose={() => setQuickSaveWord(null)}
+        initialFront={quickSaveWord?.japanese || ''}
+        initialBack={`${quickSaveWord?.romaji ? `${quickSaveWord.romaji} - ` : ''}${quickSaveWord?.meaningVi || quickSaveWord?.english || ''}`}
+        vocabularyId={quickSaveWord?.id}
+      />
     </div>
   )
 }

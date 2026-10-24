@@ -389,6 +389,56 @@
   cursor: pointer;
 }
 
+.dictionary-flashcard-action-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--accent-soft) !important;
+  color: var(--accent) !important;
+  border-color: var(--accent) !important;
+  font-weight: 600 !important;
+  transition: all 0.15s ease;
+}
+
+.dictionary-flashcard-action-btn:hover {
+  background: var(--accent) !important;
+  color: var(--on-accent) !important;
+}
+
+.dictionary-action-icon {
+  width: 16px;
+  height: 16px;
+}
+
+.dictionary-lookup-item-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.dictionary-lookup-save-btn {
+  border: 0;
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s ease;
+}
+
+.dictionary-lookup-save-btn:hover {
+  color: var(--accent);
+  background: var(--accent-soft);
+}
+
+.dictionary-lookup-save-icon {
+  width: 15px;
+  height: 15px;
+}
+
 .dictionary-meaning-section,
 .dictionary-kanji-info,
 .dictionary-kanji-breakdown,

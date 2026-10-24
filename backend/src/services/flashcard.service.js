@@ -5,6 +5,7 @@ const {
   findFlashcardSetById,
   listFlashcardSets,
   listFlashcardsBySetId,
+  quickSaveFlashcard,
 } = require('../models/flashcard.model');
 const {
   createLearningLog,
@@ -244,10 +245,35 @@ async function saveMyFlashcardReview(userId, setIdInput, payload) {
   }
 }
 
+async function quickSaveVocabularyFlashcard(userId, payload) {
+  const frontText = normalizeRequiredText(payload?.frontText, 'frontText', MAX_FRONT_LENGTH);
+  const backText = normalizeRequiredText(payload?.backText, 'backText', MAX_BACK_LENGTH);
+  const setId = payload?.setId ? parsePositiveInteger(payload.setId, 'setId') : null;
+  const vocabularyId = payload?.vocabularyId ? parsePositiveInteger(payload.vocabularyId, 'vocabularyId') : null;
+
+  const result = await quickSaveFlashcard({
+    userId,
+    setId,
+    vocabularyId,
+    frontText,
+    backText,
+  });
+
+  return {
+    card: toFlashcardResponse(result.card),
+    set: toFlashcardSetResponse(result.set),
+    alreadyExists: result.alreadyExists,
+    message: result.alreadyExists
+      ? `Từ vựng "${frontText}" đã có trong bộ "${result.set.title}".`
+      : `Đã lưu từ vựng "${frontText}" vào bộ "${result.set.title}".`,
+  };
+}
+
 module.exports = {
   addMyFlashcardSet,
   getMyFlashcardSet,
   getMyFlashcardSets,
+  quickSaveVocabularyFlashcard,
   removeMyFlashcardSet,
   saveMyFlashcardReview,
 };

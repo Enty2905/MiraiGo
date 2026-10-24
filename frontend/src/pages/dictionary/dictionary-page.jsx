@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Navigate, Link, useSearchParams } from 'react-router-dom'
 import { DashboardNav } from '../../components/dashboard/dashboard-nav'
+import { QuickSaveModal, BookmarkIcon } from '../../components/flashcards/quick-save-modal'
 import { useDictionarySearch } from '../../hooks/use-dictionary-search'
 import {
   fetchDictionaryHistory,
@@ -287,7 +288,7 @@ function KeywordSection({
   )
 }
 
-function VocabularyResult({ vocabulary, relatedKanji, query }) {
+function VocabularyResult({ vocabulary, relatedKanji, query, onQuickSaveWord }) {
   const primaryWord = vocabulary[0]
   const wordExamples = primaryWord?.examples || []
 
@@ -298,8 +299,6 @@ function VocabularyResult({ vocabulary, relatedKanji, query }) {
   return (
     <div className="dictionary-result-grid">
       <section className="dictionary-panel dictionary-entry-panel">
-
-
         <header className="dictionary-entry-header">
           <h2 lang="ja">{primaryWord.word}</h2>
           <p>
@@ -315,6 +314,20 @@ function VocabularyResult({ vocabulary, relatedKanji, query }) {
             <span>{primaryWord.kana || primaryWord.romaji || primaryWord.word}</span>
           </button>
         </header>
+
+        {onQuickSaveWord ? (
+          <div className="dictionary-action-row">
+            <button
+              type="button"
+              className="dictionary-flashcard-action-btn"
+              onClick={() => onQuickSaveWord(primaryWord)}
+              title="Lưu nhanh vào Flashcard"
+            >
+              <BookmarkIcon className="dictionary-action-icon" />
+              <span>Lưu nhanh vào Flashcard</span>
+            </button>
+          </div>
+        ) : null}
 
 
 
@@ -356,7 +369,20 @@ function VocabularyResult({ vocabulary, relatedKanji, query }) {
           <h2>Các từ vựng liên quan tới {query}</h2>
           {vocabulary.slice(0, 6).map((item) => (
             <article key={item.id} className="dictionary-lookup-item">
-              <Link to={`/dictionary?q=${encodeURIComponent(item.word)}&type=vocabulary`}>{item.word}</Link>
+              <div className="dictionary-lookup-item-top">
+                <Link to={`/dictionary?q=${encodeURIComponent(item.word)}&type=vocabulary`}>{item.word}</Link>
+                {onQuickSaveWord ? (
+                  <button
+                    type="button"
+                    className="dictionary-lookup-save-btn"
+                    onClick={() => onQuickSaveWord(item)}
+                    title="Lưu vào Flashcard"
+                    aria-label={`Lưu ${item.word} vào Flashcard`}
+                  >
+                    <BookmarkIcon className="dictionary-lookup-save-icon" />
+                  </button>
+                ) : null}
+              </div>
               <p>{getDisplayMeaning(item)}</p>
               <small>{item.kana || item.romaji}</small>
             </article>
@@ -536,6 +562,7 @@ export function DictionaryPage({ redirectToDictionary = false }) {
   const [guestHistory, setGuestHistory] = useState(readGuestHistory)
   const [accountHistory, setAccountHistory] = useState([])
   const [memoryHints, setMemoryHints] = useState([])
+  const [quickSaveWord, setQuickSaveWord] = useState(null)
   const { result, isLoading, errorMessage } = useDictionarySearch(queryParam, activeType)
 
   useEffect(() => {
@@ -652,6 +679,7 @@ export function DictionaryPage({ redirectToDictionary = false }) {
                 vocabulary={result.vocabulary}
                 relatedKanji={result.kanji}
                 query={queryParam}
+                onQuickSaveWord={setQuickSaveWord}
               />
             ) : null}
             {!isLoading && !errorMessage && activeType === 'kanji' && totalResults > 0 ? (
@@ -660,6 +688,14 @@ export function DictionaryPage({ redirectToDictionary = false }) {
           </>
         )}
       </main>
+
+      <QuickSaveModal
+        isOpen={Boolean(quickSaveWord)}
+        onClose={() => setQuickSaveWord(null)}
+        initialFront={quickSaveWord?.word || ''}
+        initialBack={`${quickSaveWord?.kana ? `${quickSaveWord.kana} ` : ''}${quickSaveWord?.romaji ? `(${quickSaveWord.romaji}) - ` : '- '}${getDisplayMeaning(quickSaveWord)}`}
+        vocabularyId={quickSaveWord?.id}
+      />
     </div>
   )
 }

@@ -286,6 +286,107 @@ async function findFlashcardsForReview(userId, setId, cardIds) {
   return rows;
 }
 
+async function quickSaveFlashcard({ userId, setId, vocabularyId, frontText, backText }) {
+  await ensureFlashcardTables();
+
+  let targetSetId = setId;
+
+  if (targetSetId) {
+    const existingSet = await findFlashcardSetById(userId, targetSetId);
+    if (!existingSet) {
+      const error = new Error('Không tìm thấy bộ flashcard.');
+      error.status = 404;
+      throw error;
+    }
+  } else {
+    const findDefaultSetQuery = `
+      SELECT id, title, description, created_at AS "createdAt", updated_at AS "updatedAt"
+      FROM user_flashcard_sets
+      WHERE user_id = $1 AND LOWER(title) = 'từ vựng đã lưu'
+      ORDER BY id ASC
+      LIMIT 1
+    `;
+    const defaultSetResult = await pool.query(findDefaultSetQuery, [userId]);
+    if (defaultSetResult.rows.length > 0) {
+      targetSetId = defaultSetResult.rows[0].id;
+    } else {
+      const createDefaultSetQuery = `
+        INSERT INTO user_flashcard_sets (user_id, title, description, created_at, updated_at)
+        VALUES ($1, 'Từ vựng đã lưu', 'Bộ từ vựng được lưu nhanh từ bài học và từ điển.', NOW(), NOW())
+        RETURNING id, title, description, created_at AS "createdAt", updated_at AS "updatedAt"
+      `;
+      const createResult = await pool.query(createDefaultSetQuery, [userId]);
+      targetSetId = createResult.rows[0].id;
+    }
+  }
+
+  let resolvedVocabId = vocabularyId || null;
+  if (!resolvedVocabId) {
+    const lookupMap = await resolveVocabularyIds([{ frontText }]);
+    resolvedVocabId = lookupMap.get(frontText.toLowerCase()) || null;
+  }
+
+  const checkCardQuery = `
+    SELECT
+      id,
+      set_id AS "setId",
+      vocabulary_id AS "vocabularyId",
+      front_text AS "frontText",
+      back_text AS "backText",
+      created_at AS "createdAt"
+    FROM user_flashcards
+    WHERE user_id = $1 AND set_id = $2 AND LOWER(front_text) = LOWER($3)
+    LIMIT 1
+  `;
+  const existingCardResult = await pool.query(checkCardQuery, [userId, targetSetId, frontText]);
+
+  const targetSet = await findFlashcardSetById(userId, targetSetId);
+
+  if (existingCardResult.rows.length > 0) {
+    return {
+      card: existingCardResult.rows[0],
+      set: targetSet,
+      alreadyExists: true,
+    };
+  }
+
+  const insertQuery = `
+    INSERT INTO user_flashcards (
+      user_id,
+      set_id,
+      vocabulary_id,
+      front_text,
+      back_text,
+      created_at,
+      updated_at
+    )
+    VALUES ($1, $2, $3, $4, $5, NOW(), NOW())
+    RETURNING
+      id,
+      set_id AS "setId",
+      vocabulary_id AS "vocabularyId",
+      front_text AS "frontText",
+      back_text AS "backText",
+      created_at AS "createdAt",
+      updated_at AS "updatedAt"
+  `;
+  const insertResult = await pool.query(insertQuery, [
+    userId,
+    targetSetId,
+    resolvedVocabId,
+    frontText,
+    backText,
+  ]);
+
+  await pool.query('UPDATE user_flashcard_sets SET updated_at = NOW() WHERE id = $1', [targetSetId]);
+
+  return {
+    card: insertResult.rows[0],
+    set: targetSet,
+    alreadyExists: false,
+  };
+}
+
 module.exports = {
   createFlashcardSet,
   deleteFlashcardSet,
@@ -293,4 +394,5 @@ module.exports = {
   findFlashcardSetById,
   listFlashcardSets,
   listFlashcardsBySetId,
+  quickSaveFlashcard,
 };

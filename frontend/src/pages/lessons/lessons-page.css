@@ -737,6 +737,35 @@
   height: 16px;
 }
 
+.lesson-vocabulary-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.lesson-vocabulary-save-btn {
+  width: 34px;
+  height: 34px;
+  border: 0;
+  border-radius: 8px;
+  background: var(--surface-inset);
+  color: var(--text-muted);
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.lesson-vocabulary-save-btn:hover {
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+
+.lesson-vocabulary-save-icon {
+  width: 16px;
+  height: 16px;
+}
+
 .lesson-vocabulary-meaning {
   margin: 6px 0 0;
   font-size: 17px;

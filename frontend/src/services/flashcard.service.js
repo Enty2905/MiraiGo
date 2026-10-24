@@ -55,3 +55,12 @@ export async function saveFlashcardReview(setId, results) {
     throw new Error(getErrorMessage(error), { cause: error })
   }
 }
+
+export async function quickSaveFlashcard(payload) {
+  try {
+    const response = await apiClient.post('/flashcards/quick-save', payload)
+    return response.data
+  } catch (error) {
+    throw new Error(getErrorMessage(error), { cause: error })
+  }
+}

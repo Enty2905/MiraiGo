@@ -2,6 +2,7 @@ const {
   addMyFlashcardSet,
   getMyFlashcardSet,
   getMyFlashcardSets,
+  quickSaveVocabularyFlashcard,
   removeMyFlashcardSet,
   saveMyFlashcardReview,
 } = require('../services/flashcard.service');
@@ -68,10 +69,21 @@ async function saveFlashcardReviewController(req, res, next) {
   }
 }
 
+async function quickSaveFlashcardController(req, res, next) {
+  try {
+    const result = await quickSaveVocabularyFlashcard(req.authUser.id, req.body);
+
+    res.status(result.alreadyExists ? 200 : 201).json(result);
+  } catch (error) {
+    next(error);
+  }
+}
+
 module.exports = {
   createFlashcardSetController,
   deleteFlashcardSetController,
   getMyFlashcardSetController,
   getMyFlashcardSetsController,
+  quickSaveFlashcardController,
   saveFlashcardReviewController,
 };
