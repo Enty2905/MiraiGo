@@ -1,4 +1,10 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
+import { useAuthSession } from './use-auth-session'
+import {
+  fetchKanaProgress,
+  syncKanaProgressApi,
+  toggleKanaMasteredApi,
+} from '../services/progress.service'
 
 const MASTERED_STORAGE_KEY = 'masteredKatakana'
 
@@ -33,10 +39,49 @@ function persistMasteredCharacters(masteredCharacters) {
 }
 
 export function useKatakanaStudy(characters) {
+  const { isAuthenticated } = useAuthSession()
   const [selectedCharacter, setSelectedCharacter] = useState(null)
   const [masteredCharacters, setMasteredCharacters] = useState(
     readMasteredCharacters,
   )
+
+  useEffect(() => {
+    let isMounted = true
+
+    if (!isAuthenticated) {
+      return
+    }
+
+    async function syncWithDatabase() {
+      try {
+        const dbCharacters = await fetchKanaProgress('katakana')
+        if (!isMounted) return
+
+        const localList = Array.from(readMasteredCharacters())
+        const dbSet = new Set(Array.isArray(dbCharacters) ? dbCharacters : [])
+
+        const unSynced = localList.filter((c) => !dbSet.has(c))
+        if (unSynced.length > 0) {
+          const result = await syncKanaProgressApi('katakana', localList)
+          if (!isMounted) return
+          const updatedSet = new Set(result.masteredCharacters || [])
+          setMasteredCharacters(updatedSet)
+          persistMasteredCharacters(updatedSet)
+        } else {
+          setMasteredCharacters(dbSet)
+          persistMasteredCharacters(dbSet)
+        }
+      } catch {
+        // Fallback to local storage on error
+      }
+    }
+
+    syncWithDatabase()
+
+    return () => {
+      isMounted = false
+    }
+  }, [isAuthenticated])
 
   const handleSelectCharacter = (character) => {
     setSelectedCharacter(character)
@@ -55,6 +100,12 @@ export function useKatakanaStudy(characters) {
       persistMasteredCharacters(nextState)
       return nextState
     })
+
+    if (isAuthenticated) {
+      toggleKanaMasteredApi('katakana', character).catch(() => {
+        // Graceful fallback
+      })
+    }
   }
 
   const masteredCount = masteredCharacters.size

@@ -506,6 +506,103 @@ async function saveLessonQuizProgress({
   }
 }
 
+let ensureKanaProgressTablePromise = null;
+
+function ensureKanaProgressTable() {
+  if (!ensureKanaProgressTablePromise) {
+    const query = `
+      CREATE TABLE IF NOT EXISTS user_kana_progress (
+        id BIGSERIAL PRIMARY KEY,
+        user_id BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        kana_type VARCHAR(20) NOT NULL,
+        character VARCHAR(10) NOT NULL,
+        is_mastered BOOLEAN NOT NULL DEFAULT true,
+        updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        UNIQUE (user_id, kana_type, character)
+      );
+
+      CREATE INDEX IF NOT EXISTS idx_user_kana_progress_user_type ON user_kana_progress(user_id, kana_type);
+    `;
+    ensureKanaProgressTablePromise = pool.query(query);
+  }
+
+  return ensureKanaProgressTablePromise;
+}
+
+async function getMasteredKanaCharacters(userId, kanaType = null) {
+  await ensureKanaProgressTable();
+
+  if (kanaType) {
+    const query = `
+      SELECT character
+      FROM user_kana_progress
+      WHERE user_id = $1
+        AND kana_type = $2
+        AND is_mastered = true
+      ORDER BY id ASC
+    `;
+    const { rows } = await pool.query(query, [userId, kanaType]);
+    return rows.map((row) => row.character);
+  }
+
+  const query = `
+    SELECT
+      kana_type AS "kanaType",
+      character
+    FROM user_kana_progress
+    WHERE user_id = $1
+      AND is_mastered = true
+    ORDER BY id ASC
+  `;
+  const { rows } = await pool.query(query, [userId]);
+
+  const result = { hiragana: [], katakana: [] };
+  for (const row of rows) {
+    if (result[row.kanaType]) {
+      result[row.kanaType].push(row.character);
+    }
+  }
+
+  return result;
+}
+
+async function toggleMasteredKana(userId, kanaType, character) {
+  await ensureKanaProgressTable();
+
+  const query = `
+    INSERT INTO user_kana_progress (user_id, kana_type, character, is_mastered, updated_at)
+    VALUES ($1, $2, $3, true, NOW())
+    ON CONFLICT (user_id, kana_type, character)
+    DO UPDATE SET
+      is_mastered = NOT user_kana_progress.is_mastered,
+      updated_at = NOW()
+    RETURNING is_mastered AS "isMastered"
+  `;
+
+  const { rows } = await pool.query(query, [userId, kanaType, character]);
+  return rows[0] || { isMastered: false };
+}
+
+async function syncMasteredKanaBatch(userId, kanaType, characters) {
+  await ensureKanaProgressTable();
+
+  if (!characters || characters.length === 0) {
+    return getMasteredKanaCharacters(userId, kanaType);
+  }
+
+  const query = `
+    INSERT INTO user_kana_progress (user_id, kana_type, character, is_mastered, updated_at)
+    SELECT $1, $2, unnest($3::text[]), true, NOW()
+    ON CONFLICT (user_id, kana_type, character)
+    DO UPDATE SET
+      is_mastered = true,
+      updated_at = NOW()
+  `;
+
+  await pool.query(query, [userId, kanaType, characters]);
+  return getMasteredKanaCharacters(userId, kanaType);
+}
+
 module.exports = {
   completeLessonProgress,
   createLearningLog,
@@ -513,6 +610,7 @@ module.exports = {
   getLearningActivityDates,
   getLessonProgressSummary,
   getLevelProgressRows,
+  getMasteredKanaCharacters,
   getRecentLearningLogs,
   getUserLocalToday,
   getWeeklyCompletedLessonCount,
@@ -520,4 +618,6 @@ module.exports = {
   getKanjiProgressSummary,
   saveLessonQuizProgress,
   saveVocabularyReviewResults,
+  syncMasteredKanaBatch,
+  toggleMasteredKana,
 };

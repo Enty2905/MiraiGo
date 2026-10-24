@@ -1,9 +1,12 @@
 const {
   getCompletedLessons,
+  getKanaProgress,
   getLearningActivity,
   getProgressOverview,
   markLessonComplete,
   saveLessonQuiz,
+  syncKanaProgressBatch,
+  toggleKanaMastered,
 } = require('../services/progress.service');
 
 async function getProgressOverviewController(req, res, next) {
@@ -68,10 +71,45 @@ async function saveLessonQuizController(req, res, next) {
   }
 }
 
+async function getKanaProgressController(req, res, next) {
+  try {
+    const data = await getKanaProgress(req.authUser.id, req.params.kanaType || null);
+
+    res.status(200).json({
+      data,
+    });
+  } catch (error) {
+    next(error);
+  }
+}
+
+async function toggleKanaMasteredController(req, res, next) {
+  try {
+    const result = await toggleKanaMastered(req.authUser.id, req.body || {});
+
+    res.status(200).json(result);
+  } catch (error) {
+    next(error);
+  }
+}
+
+async function syncKanaProgressBatchController(req, res, next) {
+  try {
+    const result = await syncKanaProgressBatch(req.authUser.id, req.body || {});
+
+    res.status(200).json(result);
+  } catch (error) {
+    next(error);
+  }
+}
+
 module.exports = {
   completeLessonController,
+  getKanaProgressController,
   getLearningActivityController,
   getCompletedLessonsController,
   getProgressOverviewController,
   saveLessonQuizController,
+  syncKanaProgressBatchController,
+  toggleKanaMasteredController,
 };

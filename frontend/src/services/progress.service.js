@@ -58,3 +58,31 @@ export async function saveLessonQuiz(payload) {
     throw new Error(getErrorMessage(error), { cause: error })
   }
 }
+
+export async function fetchKanaProgress(kanaType) {
+  try {
+    const url = kanaType ? `/progress/kana/${kanaType}` : '/progress/kana'
+    const response = await apiClient.get(url)
+    return response.data?.data || []
+  } catch (error) {
+    throw new Error(getErrorMessage(error), { cause: error })
+  }
+}
+
+export async function toggleKanaMasteredApi(kanaType, character) {
+  try {
+    const response = await apiClient.post('/progress/kana/toggle', { kanaType, character })
+    return response.data
+  } catch (error) {
+    throw new Error(getErrorMessage(error), { cause: error })
+  }
+}
+
+export async function syncKanaProgressApi(kanaType, characters) {
+  try {
+    const response = await apiClient.post('/progress/kana/sync', { kanaType, characters })
+    return response.data
+  } catch (error) {
+    throw new Error(getErrorMessage(error), { cause: error })
+  }
+}

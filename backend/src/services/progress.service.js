@@ -10,6 +10,9 @@ const {
   getKanjiProgressSummary,
   getWeeklyCompletedLessonCount,
   saveLessonQuizProgress,
+  getMasteredKanaCharacters,
+  toggleMasteredKana,
+  syncMasteredKanaBatch,
 } = require('../models/progress.model');
 const { createHttpError } = require('../utils/http-error');
 
@@ -248,10 +251,78 @@ async function saveLessonQuiz(userId, payload) {
   return progress;
 }
 
+const SUPPORTED_KANA_TYPES = new Set(['hiragana', 'katakana']);
+
+function normalizeKanaType(type) {
+  if (typeof type !== 'string') {
+    throw createHttpError(400, 'Loại bảng chữ cái kana không hợp lệ.');
+  }
+  const normalized = type.trim().toLowerCase();
+  if (!SUPPORTED_KANA_TYPES.has(normalized)) {
+    throw createHttpError(400, 'Bảng chữ cái kana phải là hiragana hoặc katakana.');
+  }
+  return normalized;
+}
+
+function normalizeKanaCharacter(char) {
+  if (typeof char !== 'string' || !char.trim()) {
+    throw createHttpError(400, 'Ký tự kana không được để trống.');
+  }
+  const trimmed = char.trim();
+  if (trimmed.length > 10) {
+    throw createHttpError(400, 'Ký tự kana không hợp lệ.');
+  }
+  return trimmed;
+}
+
+async function getKanaProgress(userId, kanaType = null) {
+  const normalizedType = kanaType ? normalizeKanaType(kanaType) : null;
+  return getMasteredKanaCharacters(userId, normalizedType);
+}
+
+async function toggleKanaMastered(userId, payload) {
+  const kanaType = normalizeKanaType(payload?.kanaType);
+  const character = normalizeKanaCharacter(payload?.character);
+
+  const result = await toggleMasteredKana(userId, kanaType, character);
+  const masteredList = await getMasteredKanaCharacters(userId, kanaType);
+
+  return {
+    kanaType,
+    character,
+    isMastered: result.isMastered,
+    masteredCharacters: masteredList,
+    message: result.isMastered
+      ? `Đã đánh dấu thuộc ký tự "${character}".`
+      : `Đã bỏ đánh dấu ký tự "${character}".`,
+  };
+}
+
+async function syncKanaProgressBatch(userId, payload) {
+  const kanaType = normalizeKanaType(payload?.kanaType);
+  const rawCharacters = Array.isArray(payload?.characters) ? payload.characters : [];
+  const characters = rawCharacters
+    .filter((c) => typeof c === 'string' && c.trim())
+    .map((c) => c.trim())
+    .slice(0, 200);
+
+  const masteredList = await syncMasteredKanaBatch(userId, kanaType, characters);
+
+  return {
+    kanaType,
+    masteredCharacters: masteredList,
+    count: masteredList.length,
+    message: `Đã đồng bộ tiến độ ${kanaType} vào tài khoản.`,
+  };
+}
+
 module.exports = {
   getCompletedLessons,
+  getKanaProgress,
   getLearningActivity,
   getProgressOverview,
   markLessonComplete,
   saveLessonQuiz,
+  syncKanaProgressBatch,
+  toggleKanaMastered,
 };

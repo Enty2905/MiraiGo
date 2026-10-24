@@ -243,6 +243,16 @@ CREATE TABLE IF NOT EXISTS user_flashcards (
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
+CREATE TABLE IF NOT EXISTS user_kana_progress (
+  id BIGSERIAL PRIMARY KEY,
+  user_id BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  kana_type VARCHAR(20) NOT NULL,
+  character VARCHAR(10) NOT NULL,
+  is_mastered BOOLEAN NOT NULL DEFAULT true,
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  UNIQUE (user_id, kana_type, character)
+);
+
 ALTER TABLE user_lesson_progress
 ADD COLUMN IF NOT EXISTS quiz_score INTEGER,
 ADD COLUMN IF NOT EXISTS quiz_correct_count INTEGER NOT NULL DEFAULT 0,
@@ -271,3 +281,4 @@ CREATE INDEX IF NOT EXISTS idx_user_lesson_progress_user_lesson ON user_lesson_p
 CREATE INDEX IF NOT EXISTS idx_user_vocab_progress_user_vocab ON user_vocab_progress(user_id, vocabulary_id);
 CREATE INDEX IF NOT EXISTS idx_user_kanji_progress_user_kanji ON user_kanji_progress(user_id, kanji_id);
 CREATE INDEX IF NOT EXISTS idx_user_flashcards_vocabulary_id ON user_flashcards(vocabulary_id);
+CREATE INDEX IF NOT EXISTS idx_user_kana_progress_user_type ON user_kana_progress(user_id, kana_type);
