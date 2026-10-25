@@ -21,6 +21,15 @@ export async function fetchMyProfile() {
   }
 }
 
+export async function updateMyProfile(payload) {
+  try {
+    const response = await apiClient.put('/profile/me', payload)
+    return response.data?.profile || null
+  } catch (error) {
+    throw new Error(getErrorMessage(error), { cause: error })
+  }
+}
+
 export async function changePassword({ currentPassword, newPassword, confirmPassword }) {
   try {
     const response = await apiClient.put('/profile/password', {

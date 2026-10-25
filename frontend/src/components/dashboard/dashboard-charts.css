@@ -1,12 +1,21 @@
+/* ==========================================================================
+   Dashboard Charts - Refined Japanese Learning Aesthetic
+   Unified with MiraiGo design tokens:
+   --page-bg: #f6f4ee, --panel-bg: #fffefa, --surface-inset: #eeece4,
+   --stroke: #d9ddd4, --stroke-strong: #9da79e,
+   --accent: #a53c30, --accent-hover: #843026, --accent-soft: #f6eae5,
+   --success: #315e4c, --warning: #805416,
+   --text-main: #25332d, --text-muted: #57645c, --text-subtle: #657067
+   ========================================================================== */
+
 .dashboard-charts-card {
   border: 1px solid var(--stroke);
   border-radius: 8px;
   background: var(--panel-bg);
-  padding: 24px;
+  padding: 24px 28px;
   display: flex;
   flex-direction: column;
   gap: 20px;
-  transition: border-color 0.2s ease, box-shadow 0.2s ease;
 }
 
 .dashboard-charts-header {
@@ -24,26 +33,28 @@
   font-size: 22px;
   font-family: var(--font-head);
   color: var(--text-main);
+  font-weight: 500;
 }
 
 .dashboard-charts-tabs {
   display: inline-flex;
   gap: 6px;
-  background: var(--surface-inset, rgba(148, 163, 184, 0.1));
+  background: var(--surface-inset);
   padding: 4px;
-  border-radius: 10px;
+  border-radius: 8px;
+  border: 1px solid var(--stroke);
 }
 
 .dashboard-charts-tab {
   padding: 8px 14px;
-  font-size: 13.5px;
-  font-weight: 600;
-  border-radius: 8px;
-  border: none;
+  font-size: 13px;
+  font-weight: 500;
+  border-radius: 6px;
+  border: 1px solid transparent;
   background: transparent;
   color: var(--text-muted);
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: all 0.15s ease;
 }
 
 .dashboard-charts-tab:hover {
@@ -53,7 +64,9 @@
 .dashboard-charts-tab.active {
   background: var(--panel-bg);
   color: var(--accent);
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+  font-weight: 600;
+  border-color: var(--stroke);
+  box-shadow: 0 1px 3px rgba(37, 51, 45, 0.06);
 }
 
 /* ==========================================================================
@@ -69,8 +82,8 @@
 
 .weekly-stat-badge {
   padding: 12px 16px;
-  border-radius: 8px;
-  background: var(--surface-inset, rgba(148, 163, 184, 0.08));
+  border-radius: 6px;
+  background: var(--surface-inset);
   border: 1px solid var(--stroke);
   display: flex;
   flex-direction: column;
@@ -118,17 +131,18 @@
   width: 100%;
   max-width: 44px;
   flex: 1;
-  background: var(--surface-inset, rgba(148, 163, 184, 0.12));
-  border-radius: 8px;
+  background: var(--surface-inset);
+  border: 1px solid var(--stroke);
+  border-radius: 4px;
   display: flex;
   align-items: flex-end;
-  padding: 3px;
+  padding: 2px;
   transition: transform 0.18s ease;
 }
 
 .weekly-bar-col:hover .weekly-bar-track,
 .weekly-bar-col:focus-visible .weekly-bar-track {
-  transform: scaleY(1.03);
+  transform: scaleY(1.02);
 }
 
 .weekly-bar-col.today .weekly-bar-track {
@@ -137,30 +151,29 @@
 
 .weekly-bar-fill {
   width: 100%;
-  min-height: 8px;
-  border-radius: 6px;
-  background: linear-gradient(180deg, #60a5fa 0%, #2563eb 100%);
+  min-height: 6px;
+  border-radius: 2px;
+  background: var(--accent);
   display: flex;
   align-items: flex-start;
   justify-content: center;
-  padding-top: 4px;
-  transition: height 0.4s cubic-bezier(0.16, 1, 0.3, 1), background 0.2s ease;
+  padding-top: 3px;
+  transition: height 0.35s ease, background-color 0.15s ease;
 }
 
 .weekly-bar-col.hovered .weekly-bar-fill {
-  background: linear-gradient(180deg, #38bdf8 0%, #0284c7 100%);
+  background: var(--accent-hover);
 }
 
 .weekly-bar-val {
   font-size: 11px;
-  font-weight: 700;
-  color: #fff;
-  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+  font-weight: 600;
+  color: var(--on-accent);
 }
 
 .weekly-bar-label {
-  font-size: 13px;
-  font-weight: 600;
+  font-size: 12.5px;
+  font-weight: 500;
   color: var(--text-muted);
 }
 
@@ -171,10 +184,10 @@
 
 /* Tooltip Panel */
 .weekly-tooltip-panel {
-  min-height: 56px;
+  min-height: 52px;
   padding: 12px 16px;
-  border-radius: 8px;
-  background: var(--surface-inset, rgba(148, 163, 184, 0.08));
+  border-radius: 6px;
+  background: var(--surface-inset);
   border: 1px solid var(--stroke);
   display: flex;
   align-items: center;
@@ -202,7 +215,7 @@
 }
 
 .weekly-tooltip-header strong {
-  font-size: 16px;
+  font-size: 15px;
   color: var(--text-main);
 }
 
@@ -237,18 +250,18 @@
   display: inline-block;
 }
 
-.dot-lesson { background-color: #3b82f6; }
-.dot-quiz { background-color: #10b981; }
-.dot-flashcard { background-color: #8b5cf6; }
+.dot-lesson { background-color: var(--accent); }
+.dot-quiz { background-color: var(--success); }
+.dot-flashcard { background-color: var(--warning); }
 
 /* ==========================================================================
-   Tab 2: JLPT Donut & Distribution
+   Tab 2: JLPT Donut & Distribution (Matching User Screenshot!)
    ========================================================================== */
 
 .jlpt-chart-layout {
   display: grid;
-  grid-template-columns: 280px 1fr;
-  gap: 24px;
+  grid-template-columns: 290px 1fr;
+  gap: 32px;
   align-items: center;
 }
 
@@ -257,20 +270,19 @@
   flex-direction: column;
   align-items: center;
   text-align: center;
-  gap: 12px;
-  padding: 16px;
+  gap: 16px;
+  padding: 24px 18px;
   border-radius: 8px;
-  background: var(--surface-inset, rgba(148, 163, 184, 0.06));
+  background: var(--surface-inset);
   border: 1px solid var(--stroke);
 }
 
 .jlpt-donut-svg {
-  filter: drop-shadow(0 2px 8px rgba(37, 99, 235, 0.15));
+  display: block;
 }
 
 .jlpt-donut-track {
   stroke: var(--stroke);
-  opacity: 0.5;
 }
 
 .jlpt-donut-progress {
@@ -279,15 +291,15 @@
 }
 
 .jlpt-donut-rate {
-  font-size: 26px;
-  font-weight: 800;
+  font-size: 28px;
+  font-weight: 600;
   font-family: var(--font-head);
   fill: var(--text-main);
 }
 
 .jlpt-donut-sub {
   font-size: 11px;
-  font-weight: 600;
+  font-weight: 500;
   fill: var(--text-muted);
 }
 
@@ -296,60 +308,69 @@
   font-size: 15px;
   font-family: var(--font-head);
   color: var(--text-main);
+  font-weight: 600;
 }
 
 .jlpt-donut-info p {
-  margin: 4px 0 0;
+  margin: 6px 0 0;
   font-size: 13px;
   color: var(--text-muted);
-  line-height: 1.4;
+  line-height: 1.45;
 }
 
 .jlpt-levels-breakdown {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 14px;
 }
 
 .jlpt-levels-breakdown h4 {
-  margin: 0;
+  margin: 0 0 4px;
   font-size: 15px;
   font-family: var(--font-head);
   color: var(--text-main);
+  font-weight: 600;
 }
 
 .jlpt-bars-stack {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 12px;
 }
 
 .jlpt-bar-item {
   display: flex;
   flex-direction: column;
   gap: 6px;
-  padding: 8px 12px;
-  border-radius: 8px;
-  transition: background-color 0.2s ease;
+  padding-bottom: 8px;
+  border-bottom: 1px solid rgba(217, 221, 212, 0.4);
 }
 
-.jlpt-bar-item:hover,
-.jlpt-bar-item.active {
-  background-color: var(--surface-inset, rgba(148, 163, 184, 0.1));
+.jlpt-bar-item:last-child {
+  border-bottom: none;
 }
 
 .jlpt-bar-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 10px;
+  gap: 12px;
 }
 
-.jlpt-bar-tag {
-  font-size: 12px;
-  font-weight: 700;
-  padding: 2px 8px;
-  border-radius: 6px;
+.jlpt-bar-level-name {
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--text-main);
+}
+
+.jlpt-bar-level-name.accent {
+  color: var(--accent);
+}
+
+.jlpt-bar-meta {
+  display: flex;
+  align-items: center;
+  gap: 16px;
 }
 
 .jlpt-bar-counts {
@@ -358,22 +379,31 @@
 }
 
 .jlpt-bar-percent {
-  font-size: 13.5px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-muted);
+  min-width: 32px;
+  text-align: right;
+}
+
+.jlpt-bar-percent.accent {
+  color: var(--accent);
   font-weight: 700;
 }
 
 .jlpt-bar-bg {
   width: 100%;
-  height: 8px;
-  background: var(--surface-inset, rgba(148, 163, 184, 0.15));
-  border-radius: 4px;
+  height: 3px;
+  background: var(--stroke);
+  border-radius: 2px;
   overflow: hidden;
 }
 
 .jlpt-bar-fill {
   height: 100%;
-  border-radius: 4px;
-  transition: width 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+  border-radius: 2px;
+  background: var(--accent);
+  transition: width 0.4s ease;
 }
 
 /* ==========================================================================
@@ -397,46 +427,28 @@
   gap: 14px;
   padding: 16px;
   border-radius: 8px;
-  background: var(--surface-inset, rgba(148, 163, 184, 0.06));
+  background: var(--surface-inset);
   border: 1px solid var(--stroke);
-  transition: transform 0.15s ease, border-color 0.15s ease;
+  transition: border-color 0.15s ease;
 }
 
 .skill-meter-card:hover {
-  transform: translateY(-2px);
-  border-color: var(--accent);
+  border-color: var(--stroke-strong);
 }
 
 .skill-meter-icon {
   width: 44px;
   height: 44px;
-  border-radius: 10px;
+  border-radius: 6px;
   display: grid;
   place-items: center;
   font-size: 20px;
-  font-weight: 700;
-  font-family: var(--font-head);
+  font-weight: 600;
+  font-family: var(--font-japanese);
+  background: var(--panel-bg);
+  border: 1px solid var(--stroke);
+  color: var(--accent);
   flex-shrink: 0;
-}
-
-.kana-icon {
-  background: rgba(236, 72, 153, 0.15);
-  color: #ec4899;
-}
-
-.lesson-icon {
-  background: rgba(59, 130, 246, 0.15);
-  color: #3b82f6;
-}
-
-.vocab-icon {
-  background: rgba(16, 185, 129, 0.15);
-  color: #10b981;
-}
-
-.card-icon {
-  background: rgba(139, 92, 246, 0.15);
-  color: #8b5cf6;
 }
 
 .skill-meter-content {
@@ -454,34 +466,32 @@
 }
 
 .skill-meter-header strong {
-  font-size: 14px;
+  font-size: 13.5px;
   color: var(--text-main);
+  font-weight: 600;
 }
 
 .skill-meter-score {
-  font-size: 12.5px;
-  font-weight: 600;
+  font-size: 12px;
+  font-weight: 500;
   color: var(--text-muted);
 }
 
 .skill-meter-track {
   width: 100%;
-  height: 8px;
-  border-radius: 4px;
-  background: var(--surface-inset, rgba(148, 163, 184, 0.15));
+  height: 5px;
+  border-radius: 3px;
+  background: var(--panel-bg);
+  border: 1px solid var(--stroke);
   overflow: hidden;
 }
 
 .skill-meter-fill {
   height: 100%;
-  border-radius: 4px;
-  transition: width 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+  border-radius: 2px;
+  background: var(--accent);
+  transition: width 0.4s ease;
 }
-
-.fill-pink { background: linear-gradient(90deg, #ec4899, #f43f5e); }
-.fill-blue { background: linear-gradient(90deg, #3b82f6, #06b6d4); }
-.fill-emerald { background: linear-gradient(90deg, #10b981, #14b8a6); }
-.fill-violet { background: linear-gradient(90deg, #8b5cf6, #a855f7); }
 
 .skill-meter-tip {
   margin: 2px 0 0;

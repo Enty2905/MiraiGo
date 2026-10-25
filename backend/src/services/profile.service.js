@@ -2,6 +2,8 @@ const userModel = require('../models/user.model');
 const { hashPassword, verifyPassword } = require('../utils/password');
 const { createHttpError } = require('../utils/http-error');
 
+const VALID_LEVELS = new Set(['N5', 'N4', 'N3', 'N2', 'N1']);
+
 async function getMyProfile(userId) {
   const user = await userModel.findUserById(userId);
   if (!user) {
@@ -9,6 +11,63 @@ async function getMyProfile(userId) {
   }
 
   return user;
+}
+
+async function updateMyProfile(userId, payload = {}) {
+  const updates = {};
+
+  if (payload.fullName !== undefined) {
+    if (typeof payload.fullName !== 'string' || !payload.fullName.trim()) {
+      throw createHttpError(400, 'Họ và tên không được để trống.');
+    }
+    if (payload.fullName.trim().length > 255) {
+      throw createHttpError(400, 'Họ và tên không được vượt quá 255 ký tự.');
+    }
+    updates.fullName = payload.fullName.trim();
+  }
+
+  if (payload.displayName !== undefined) {
+    if (payload.displayName === null || payload.displayName === '') {
+      updates.displayName = null;
+    } else if (typeof payload.displayName === 'string') {
+      const trimmed = payload.displayName.trim();
+      if (trimmed.length > 255) {
+        throw createHttpError(400, 'Tên hiển thị không được vượt quá 255 ký tự.');
+      }
+      updates.displayName = trimmed;
+    }
+  }
+
+  if (payload.currentLevel !== undefined) {
+    if (payload.currentLevel === null || payload.currentLevel === '') {
+      updates.currentLevel = null;
+    } else {
+      const levelUpper = String(payload.currentLevel).trim().toUpperCase();
+      if (!VALID_LEVELS.has(levelUpper)) {
+        throw createHttpError(400, 'Cấp độ tiếng Nhật phải là N5, N4, N3, N2 hoặc N1.');
+      }
+      updates.currentLevel = levelUpper;
+    }
+  }
+
+  if (payload.avatarUrl !== undefined) {
+    if (payload.avatarUrl === null || payload.avatarUrl === '') {
+      updates.avatarUrl = null;
+    } else if (typeof payload.avatarUrl === 'string') {
+      updates.avatarUrl = payload.avatarUrl.trim();
+    }
+  }
+
+  if (payload.timezone !== undefined && typeof payload.timezone === 'string') {
+    updates.timezone = payload.timezone.trim();
+  }
+
+  const updatedUser = await userModel.updateUserProfile(userId, updates);
+  if (!updatedUser) {
+    throw createHttpError(404, 'Không tìm thấy hồ sơ người dùng.');
+  }
+
+  return updatedUser;
 }
 
 async function changeMyPassword(userId, { currentPassword, newPassword, confirmPassword } = {}) {
@@ -49,5 +108,6 @@ async function changeMyPassword(userId, { currentPassword, newPassword, confirmP
 
 module.exports = {
   getMyProfile,
+  updateMyProfile,
   changeMyPassword,
 };

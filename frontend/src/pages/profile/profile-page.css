@@ -1,191 +1,692 @@
-.profile-main {
-  gap: 16px;
+/* ==========================================================================
+   Profile Page - Refined Japanese Learning Journal Aesthetic
+   Aligned with MiraiGo Design System tokens:
+   --page-bg: #f6f4ee, --panel-bg: #fffefa, --surface-inset: #eeece4,
+   --stroke: #d9ddd4, --stroke-strong: #9da79e,
+   --accent: #a53c30, --accent-hover: #843026, --accent-soft: #f6eae5,
+   --success: #315e4c, --success-soft: #e8efe8,
+   --text-main: #25332d, --text-muted: #57645c, --text-subtle: #657067
+   ========================================================================== */
+
+.profile-layout-page {
+  min-height: 100vh;
 }
 
-.profile-card {
+.profile-main {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  padding-bottom: 48px;
+}
+
+/* ==========================================================================
+   KHU VỰC A: Thẻ hồ sơ cá nhân (Hero Card)
+   ========================================================================== */
+
+.profile-hero-card {
   border: 1px solid var(--stroke);
   border-radius: 8px;
   background: var(--panel-bg);
-  box-shadow: none;
-  padding: 20px;
-}
-
-.profile-header {
+  padding: 24px 28px;
   display: flex;
-  gap: 14px;
   align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  flex-wrap: wrap;
 }
 
-.profile-avatar {
-  width: 72px;
-  height: 72px;
-  border-radius: 999px;
+.profile-hero-left {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  flex-wrap: wrap;
+}
+
+/* Avatar Wrapper & Edit Trigger */
+.profile-avatar-wrapper {
+  position: relative;
+  display: inline-block;
+}
+
+.profile-avatar-display {
+  width: 82px;
+  height: 82px;
+  border-radius: 50%;
   display: grid;
   place-items: center;
-  color: var(--on-accent);
-  font-family: var(--font-head);
-  font-size: 24px;
-  font-weight: 700;
-  background: var(--accent);
+  background: var(--surface-inset);
+  border: 2px solid var(--stroke-strong);
+  overflow: hidden;
+  cursor: pointer;
+  transition: border-color 0.18s ease, transform 0.18s ease;
 }
 
-.profile-identity h1 {
-  margin: 0;
-  font-family: var(--font-head);
-  font-size: 31px;
-  color: var(--text-main);
+.profile-avatar-display:hover {
+  border-color: var(--accent);
+  transform: scale(1.02);
 }
 
-.profile-identity p {
-  margin: 6px 0 0;
+.profile-avatar-glyph {
+  font-family: var(--font-japanese);
+  font-size: 38px;
+  line-height: 1;
+  color: var(--accent);
+  user-select: none;
+}
+
+.profile-avatar-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.profile-avatar-text {
+  font-family: var(--font-head);
+  font-size: 26px;
+  font-weight: 600;
+  color: var(--accent);
+}
+
+.profile-avatar-edit-btn {
+  position: absolute;
+  bottom: 0;
+  right: 0;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: var(--panel-bg);
   color: var(--text-muted);
-  font-size: 15px;
+  border: 1px solid var(--stroke-strong);
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  box-shadow: var(--shadow-soft);
 }
 
-.profile-actions {
-  margin-top: 16px;
+.profile-avatar-edit-btn:hover {
+  color: var(--accent);
+  border-color: var(--accent);
+  transform: scale(1.08);
+}
+
+.profile-avatar-edit-btn svg {
+  width: 13px;
+  height: 13px;
+}
+
+/* Details */
+.profile-hero-details {
   display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.profile-name-row {
+  display: flex;
+  align-items: center;
   gap: 10px;
   flex-wrap: wrap;
 }
 
-.profile-logout-btn,
-.profile-back-link {
-  border-radius: 10px;
-  padding: 10px 14px;
-  font-size: 14px;
-  font-weight: 600;
-  text-decoration: none;
-  border: 0;
-  transition: opacity 0.2s ease, transform 0.15s ease;
+.profile-name-row h1 {
+  margin: 0;
+  font-family: var(--font-head);
+  font-size: 25px;
+  color: var(--text-main);
+  line-height: 1.25;
 }
 
-.profile-logout-btn:hover,
-.profile-back-link:hover {
-  opacity: 0.92;
-  transform: translateY(-1px);
+.profile-role-badge {
+  font-size: 11.5px;
+  font-weight: 500;
+  padding: 2px 9px;
+  border-radius: 4px;
+  background: var(--surface-inset);
+  color: var(--text-muted);
+  border: 1px solid var(--stroke);
+}
+
+.profile-level-badge {
+  font-size: 12px;
+  font-weight: 600;
+  padding: 2px 9px;
+  border-radius: 4px;
+  background: var(--accent-soft);
+  color: var(--accent);
+  border: 1px solid var(--accent);
+}
+
+.profile-fullname-text {
+  margin: 0;
+  font-size: 13.5px;
+  color: var(--text-muted);
+}
+
+.profile-meta-info {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  font-size: 13px;
+  color: var(--text-muted);
+  flex-wrap: wrap;
+  margin-top: 2px;
+}
+
+.profile-meta-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.profile-meta-item svg {
+  color: var(--text-subtle);
+}
+
+/* Hero Actions */
+.profile-hero-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.profile-btn-edit-fast {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  border: 1px solid var(--stroke-strong);
+  background: var(--panel-bg);
+  color: var(--text-main);
+  transition: background 0.15s, border-color 0.15s;
+}
+
+.profile-btn-edit-fast svg {
+  color: var(--text-muted);
+  transition: color 0.15s;
+}
+
+.profile-btn-edit-fast:hover {
+  background: var(--surface-inset);
+  border-color: var(--text-main);
+}
+
+.profile-btn-edit-fast:hover svg {
+  color: var(--text-main);
 }
 
 .profile-logout-btn {
-  color: var(--on-accent);
+  padding: 8px 16px;
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 600;
   cursor: pointer;
-  background: var(--accent);
+  border: 1px solid var(--stroke);
+  background: transparent;
+  color: var(--text-muted);
+  transition: all 0.15s;
 }
 
-.profile-back-link {
-  color: var(--text-main);
-  border: 1px solid var(--stroke);
-  background: var(--panel-bg);
+.profile-logout-btn:hover {
+  background: var(--error-soft);
+  border-color: var(--error);
+  color: var(--error);
 }
 
 .profile-feedback {
-  margin: 14px 0 0;
-  color: var(--text-main);
+  width: 100%;
+  margin: 10px 0 0;
+  font-size: 13px;
+  color: var(--text-muted);
 }
 
 .profile-feedback--error {
   color: var(--error);
 }
 
+/* ==========================================================================
+   KHU VỰC B: Tổng quan học tập (4 Thẻ số liệu đồng bộ phong cách Nhật Bản)
+   ========================================================================== */
+
 .profile-stats-grid {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 12px;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 14px;
 }
 
 .profile-stat-card {
   border: 1px solid var(--stroke);
   border-radius: 8px;
   background: var(--panel-bg);
-  box-shadow: none;
-  padding: 16px;
+  padding: 16px 18px;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  transition: border-color 0.15s ease;
+}
+
+.profile-stat-card:hover {
+  border-color: var(--stroke-strong);
+}
+
+.profile-stat-icon-wrap {
+  width: 44px;
+  height: 44px;
+  border-radius: 6px;
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  background: var(--surface-inset);
+  border: 1px solid var(--stroke);
+  color: var(--text-main);
+  transition: border-color 0.15s ease, color 0.15s ease;
+}
+
+.profile-stat-card:hover .profile-stat-icon-wrap {
+  border-color: var(--stroke-strong);
+  color: var(--accent);
+}
+
+.profile-stat-kana-glyph {
+  font-family: var(--font-japanese);
+  font-size: 22px;
+  font-weight: 600;
+  color: var(--accent);
+  line-height: 1;
 }
 
 .profile-stat-label {
   margin: 0;
+  font-size: 12.5px;
+  color: var(--text-muted);
+  font-weight: 500;
+}
+
+.profile-stat-value {
+  margin: 2px 0 0;
+  font-family: var(--font-head);
+  font-size: 22px;
+  color: var(--text-main);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ==========================================================================
+   Tabs Container & Nav (C, D, E)
+   ========================================================================== */
+
+.profile-tabs-container {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.profile-tabs-nav {
+  display: flex;
+  gap: 6px;
+  background: var(--panel-bg);
+  padding: 5px;
+  border-radius: 8px;
+  border: 1px solid var(--stroke);
+  overflow-x: auto;
+}
+
+.profile-tab-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  border-radius: 6px;
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--text-muted);
+  font-size: 13.5px;
+  font-weight: 500;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.15s ease;
+}
+
+.profile-tab-item svg {
+  color: var(--text-subtle);
+  transition: color 0.15s ease;
+}
+
+.profile-tab-item:hover {
+  color: var(--text-main);
+  background: var(--surface-inset);
+}
+
+.profile-tab-item:hover svg {
+  color: var(--text-main);
+}
+
+.profile-tab-item.active {
+  background: var(--accent-soft);
+  color: var(--accent);
+  font-weight: 600;
+  border-color: var(--accent);
+}
+
+.profile-tab-item.active svg {
+  color: var(--accent);
+}
+
+.profile-tab-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  animation: fadeIn 0.2s ease-out;
+}
+
+/* ==========================================================================
+   KHU VỰC C: Mục tiêu học tiếng Nhật
+   ========================================================================== */
+
+.profile-goals-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: 16px;
+}
+
+.profile-goal-box {
+  border: 1px solid var(--stroke);
+  border-radius: 8px;
+  background: var(--panel-bg);
+  padding: 22px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.profile-goal-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.profile-goal-header h3 {
+  margin: 0;
+  font-size: 16px;
+  font-family: var(--font-head);
+  color: var(--text-main);
+}
+
+.profile-goal-header p {
+  margin: 4px 0 0;
   font-size: 13px;
   color: var(--text-muted);
 }
 
-.profile-stat-value {
-  margin: 8px 0 0;
-  font-family: var(--font-head);
-  font-size: 30px;
+.profile-goal-badge {
+  font-size: 12.5px;
+  font-weight: 600;
+  padding: 3px 9px;
+  border-radius: 4px;
+  background: var(--surface-inset);
   color: var(--text-main);
+  border: 1px solid var(--stroke);
+  white-space: nowrap;
+}
+
+.profile-progress-bar-bg {
+  width: 100%;
+  height: 8px;
+  border-radius: 4px;
+  background: var(--surface-inset);
+  border: 1px solid var(--stroke);
+  overflow: hidden;
+}
+
+.profile-progress-bar-fill {
+  height: 100%;
+  border-radius: 3px;
+  background: var(--accent);
+  transition: width 0.4s ease;
+}
+
+.profile-goal-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  font-size: 13px;
+  color: var(--text-muted);
+}
+
+.profile-link-continue {
+  font-weight: 600;
+  color: var(--accent);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.profile-link-continue:hover {
+  color: var(--accent-hover);
+}
+
+.profile-daily-options {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px;
+}
+
+.profile-daily-btn {
+  padding: 8px 6px;
+  border-radius: 6px;
+  border: 1px solid var(--stroke);
+  background: var(--panel-bg);
+  color: var(--text-main);
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.profile-daily-btn:hover {
+  border-color: var(--stroke-strong);
+  background: var(--surface-inset);
+}
+
+.profile-daily-btn.selected {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+  color: var(--accent);
+  font-weight: 600;
+}
+
+.profile-goal-hint {
+  margin: 0;
+  font-size: 13px;
+  color: var(--text-muted);
+  line-height: 1.45;
 }
 
 /* ==========================================================================
-   Change Password Section
+   KHU VỰC D: Hoạt động học tập gần đây
    ========================================================================== */
 
-.profile-password-section {
+.profile-history-card {
+  border: 1px solid var(--stroke);
+  border-radius: 8px;
+  background: var(--panel-bg);
+  padding: 22px;
   display: flex;
   flex-direction: column;
   gap: 18px;
 }
 
-.profile-password-header {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-
-.profile-password-icon {
-  font-size: 26px;
-  line-height: 1;
-  padding: 10px;
-  border-radius: 10px;
-  background: var(--surface-inset, rgba(148, 163, 184, 0.1));
-}
-
-.profile-password-title {
+.profile-history-header h3 {
   margin: 0;
-  font-size: 20px;
+  font-size: 18px;
   font-family: var(--font-head);
   color: var(--text-main);
 }
 
-.profile-password-subtitle {
+.profile-history-header p {
   margin: 4px 0 0;
-  font-size: 13.5px;
+  font-size: 13px;
   color: var(--text-muted);
 }
 
-/* Alerts */
-.profile-alert {
+.profile-history-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.profile-history-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  padding: 12px 16px;
+  border-radius: 6px;
+  background: var(--surface-inset);
+  border: 1px solid var(--stroke);
+  transition: border-color 0.15s ease;
+}
+
+.profile-history-item:hover {
+  border-color: var(--stroke-strong);
+}
+
+.profile-history-icon-box {
+  width: 36px;
+  height: 36px;
+  border-radius: 6px;
+  display: grid;
+  place-items: center;
+  background: var(--panel-bg);
+  border: 1px solid var(--stroke);
+  color: var(--accent);
+  flex-shrink: 0;
+}
+
+.profile-history-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.profile-history-top {
   display: flex;
   align-items: center;
+  justify-content: space-between;
   gap: 10px;
-  padding: 12px 16px;
-  border-radius: 8px;
+}
+
+.profile-history-tag {
+  font-size: 11.5px;
+  font-weight: 600;
+  padding: 2px 7px;
+  border-radius: 4px;
+  background: var(--panel-bg);
+  color: var(--text-muted);
+  border: 1px solid var(--stroke);
+}
+
+.profile-history-time {
+  font-size: 12px;
+  color: var(--text-subtle);
+}
+
+.profile-history-title {
+  margin: 2px 0 0;
   font-size: 14px;
-  font-weight: 500;
-  line-height: 1.4;
+  font-weight: 600;
+  color: var(--text-main);
 }
 
-.profile-alert--success {
-  background: rgba(56, 161, 105, 0.12);
-  color: var(--success, #38a169);
-  border: 1px solid rgba(56, 161, 105, 0.3);
+.profile-history-sub {
+  margin: 2px 0 0;
+  font-size: 12.5px;
+  color: var(--text-muted);
 }
 
-.profile-alert--error {
-  background: rgba(229, 62, 62, 0.12);
-  color: var(--error, #e53e3e);
-  border: 1px solid rgba(229, 62, 62, 0.3);
+.profile-history-sub strong {
+  color: var(--text-main);
 }
 
-.profile-alert-icon {
-  font-size: 16px;
-  font-weight: 700;
+.profile-history-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 12px;
+  padding: 40px 16px;
+  color: var(--text-muted);
 }
 
-/* Form */
-.profile-password-form {
+.profile-history-empty .empty-icon-wrap {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: var(--surface-inset);
+  border: 1px solid var(--stroke);
+  color: var(--text-muted);
+}
+
+.profile-btn-start {
+  padding: 10px 20px;
+  border-radius: 6px;
+  background: var(--accent);
+  color: var(--on-accent);
+  text-decoration: none;
+  font-size: 14px;
+  font-weight: 600;
+  transition: background 0.15s ease;
+}
+
+.profile-btn-start:hover {
+  background: var(--accent-hover);
+}
+
+/* ==========================================================================
+   KHU VỰC E: Cài đặt tài khoản & Bảo mật
+   ========================================================================== */
+
+.profile-settings-layout {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(360px, 1fr));
+  gap: 18px;
+}
+
+.profile-settings-card {
+  padding: 22px;
   display: flex;
   flex-direction: column;
   gap: 16px;
-  max-width: 540px;
+  border: 1px solid var(--stroke);
+  border-radius: 8px;
+  background: var(--panel-bg);
+}
+
+.profile-settings-header h3 {
+  margin: 0;
+  font-size: 18px;
+  font-family: var(--font-head);
+  color: var(--text-main);
+}
+
+.profile-settings-header p {
+  margin: 4px 0 0;
+  font-size: 13px;
+  color: var(--text-muted);
+}
+
+.profile-settings-form {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
 }
 
 .profile-form-group {
@@ -195,13 +696,30 @@
 }
 
 .profile-form-label {
-  font-size: 13.5px;
+  font-size: 13px;
   font-weight: 600;
   color: var(--text-main);
 }
 
 .profile-form-required {
-  color: var(--error, #e53e3e);
+  color: var(--error);
+}
+
+.profile-form-input {
+  width: 100%;
+  padding: 10px 14px;
+  border-radius: 6px;
+  border: 1px solid var(--stroke);
+  background: var(--panel-bg);
+  color: var(--text-main);
+  font-size: 14px;
+  outline: none;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.profile-form-input:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px var(--accent-soft);
 }
 
 .profile-input-wrapper {
@@ -210,42 +728,24 @@
   align-items: center;
 }
 
-.profile-form-input {
-  width: 100%;
-  padding: 11px 44px 11px 14px;
-  border-radius: 8px;
-  border: 1px solid var(--stroke);
-  background: var(--input-bg, var(--panel-bg));
-  color: var(--text-main);
-  font-size: 14px;
-  outline: none;
-  transition: border-color 0.2s ease, box-shadow 0.2s ease;
-}
-
-.profile-form-input:focus {
-  border-color: var(--accent);
-  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
-}
-
 .profile-pwd-toggle {
   position: absolute;
   right: 10px;
   background: none;
   border: none;
   cursor: pointer;
-  font-size: 16px;
-  padding: 4px;
-  line-height: 1;
+  padding: 6px;
+  display: grid;
+  place-items: center;
   color: var(--text-muted);
   border-radius: 4px;
-  transition: opacity 0.15s ease;
+  transition: color 0.15s ease;
 }
 
 .profile-pwd-toggle:hover {
-  opacity: 0.8;
+  color: var(--text-main);
 }
 
-/* Strength Meter */
 .profile-pwd-strength {
   display: flex;
   align-items: center;
@@ -272,90 +772,92 @@
   font-weight: 600;
 }
 
-.profile-field-hint {
+.profile-field-hint--error {
   margin: 4px 0 0;
   font-size: 12.5px;
+  color: var(--error);
 }
 
-.profile-field-hint--error {
-  color: var(--error, #e53e3e);
-}
-
+/* Form Actions */
 .profile-form-actions {
   margin-top: 6px;
 }
 
-.profile-submit-pwd-btn {
+.profile-btn-save-info,
+.profile-btn-save-pwd {
   display: inline-flex;
   align-items: center;
-  gap: 8px;
-  padding: 11px 22px;
-  border-radius: 8px;
-  border: none;
+  justify-content: center;
+  padding: 10px 20px;
+  border-radius: 6px;
+  border: 1px solid var(--accent);
   background: var(--accent);
   color: var(--on-accent);
-  font-size: 14.5px;
+  font-size: 14px;
   font-weight: 600;
   cursor: pointer;
-  transition: opacity 0.2s ease, transform 0.15s ease;
+  transition: background 0.15s ease;
 }
 
-.profile-submit-pwd-btn:hover:not(:disabled) {
-  opacity: 0.92;
-  transform: translateY(-1px);
+.profile-btn-save-info:hover:not(:disabled),
+.profile-btn-save-pwd:hover:not(:disabled) {
+  background: var(--accent-hover);
+  border-color: var(--accent-hover);
 }
 
-.profile-submit-pwd-btn:disabled {
-  opacity: 0.6;
+.profile-btn-save-info:disabled,
+.profile-btn-save-pwd:disabled {
+  opacity: 0.55;
   cursor: not-allowed;
 }
 
-.profile-spinner {
-  width: 14px;
-  height: 14px;
-  border: 2px solid currentColor;
-  border-top-color: transparent;
-  border-radius: 50%;
-  animation: spin 0.7s linear infinite;
+/* Alerts */
+.profile-alert {
+  padding: 10px 14px;
+  border-radius: 6px;
+  font-size: 13.5px;
+  font-weight: 500;
+  line-height: 1.4;
 }
 
-@keyframes spin {
-  to {
-    transform: rotate(360deg);
-  }
+.profile-alert--success {
+  background: var(--success-soft);
+  color: var(--success);
+  border: 1px solid var(--success);
 }
 
-/* ==========================================================================
-   Responsive
-   ========================================================================== */
+.profile-alert--error {
+  background: var(--error-soft);
+  color: var(--error);
+  border: 1px solid var(--error);
+}
+
+/* Animations & Responsive */
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
 
 @media (max-width: 980px) {
   .profile-stats-grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-columns: repeat(2, 1fr);
   }
 }
 
-@media (max-width: 620px) {
-  .profile-card {
-    padding: 16px;
-  }
-
-  .profile-avatar {
-    width: 62px;
-    height: 62px;
-    font-size: 20px;
-  }
-
-  .profile-identity h1 {
-    font-size: 25px;
-  }
-
-  .profile-actions {
+@media (max-width: 640px) {
+  .profile-hero-card {
+    padding: 18px;
     flex-direction: column;
+    align-items: flex-start;
   }
 
-  .profile-logout-btn,
-  .profile-back-link {
+  .profile-hero-actions {
+    width: 100%;
+  }
+
+  .profile-btn-edit-fast,
+  .profile-logout-btn {
+    flex: 1;
     text-align: center;
   }
 
@@ -363,12 +865,12 @@
     grid-template-columns: 1fr;
   }
 
-  .profile-password-form {
-    max-width: 100%;
+  .profile-settings-layout {
+    grid-template-columns: 1fr;
   }
 
-  .profile-submit-pwd-btn {
+  .profile-btn-save-info,
+  .profile-btn-save-pwd {
     width: 100%;
-    justify-content: center;
   }
 }

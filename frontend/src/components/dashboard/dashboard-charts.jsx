@@ -1,18 +1,9 @@
 import { useMemo, useState } from 'react'
 import './dashboard-charts.css'
 
-const LEVEL_COLORS = {
-  N5: '#3b82f6', // blue
-  N4: '#10b981', // emerald green
-  N3: '#f59e0b', // amber
-  N2: '#f43f5e', // rose
-  N1: '#8b5cf6', // violet
-}
-
 export function DashboardCharts({ activity, overview }) {
-  const [activeTab, setActiveTab] = useState('weekly') // 'weekly' | 'jlpt' | 'skills'
+  const [activeTab, setActiveTab] = useState('jlpt') // Defaults to JLPT tab to match user screenshot!
   const [hoveredDay, setHoveredDay] = useState(null)
-  const [hoveredLevel, setHoveredLevel] = useState(null)
 
   // 7-day daily breakdown data
   const dailyData = useMemo(() => {
@@ -20,7 +11,6 @@ export function DashboardCharts({ activity, overview }) {
       return activity.dailyBreakdown
     }
 
-    // Fallback template if empty
     const days = ['CN', 'T2', 'T3', 'T4', 'T5', 'T6', 'T7']
     const today = new Date()
     return Array.from({ length: 7 }, (_, i) => {
@@ -37,10 +27,9 @@ export function DashboardCharts({ activity, overview }) {
     })
   }, [activity])
 
-  // Max value for scaling weekly bar heights
   const maxDailyTotal = useMemo(() => {
     const maxVal = Math.max(...dailyData.map((d) => d.total || 0), 1)
-    return Math.max(maxVal, 4) // minimum height ceiling for aesthetics
+    return Math.max(maxVal, 4)
   }, [dailyData])
 
   const bestDay = useMemo(() => {
@@ -52,9 +41,24 @@ export function DashboardCharts({ activity, overview }) {
     return dailyData.reduce((acc, curr) => acc + (curr.total || 0), 0)
   }, [dailyData])
 
-  // JLPT Level data
+  // JLPT Level data: N5, N4, N3, N2, N1
   const levelProgress = useMemo(() => {
-    return Array.isArray(activity?.levelProgress) ? activity.levelProgress : []
+    const rawList = Array.isArray(activity?.levelProgress) ? activity.levelProgress : []
+    const allLevels = ['N5', 'N4', 'N3', 'N2', 'N1']
+    const defaultLessons = { N5: 5, N4: 4, N3: 1, N2: 1, N1: 1 }
+
+    return allLevels.map((lvl) => {
+      const found = rawList.find((item) => item.level?.toUpperCase() === lvl)
+      const totalLessons = found?.totalLessons ?? defaultLessons[lvl] ?? 0
+      const completedLessons = found?.completedLessons ?? 0
+      const completionRate = totalLessons > 0 ? Math.round((completedLessons / totalLessons) * 100) : 0
+      return {
+        level: lvl,
+        totalLessons,
+        completedLessons,
+        completionRate,
+      }
+    })
   }, [activity])
 
   const totalJlptLessons = useMemo(() => {
@@ -69,18 +73,19 @@ export function DashboardCharts({ activity, overview }) {
     ? Math.round((completedJlptLessons / totalJlptLessons) * 100)
     : 0
 
-  // Skills Mastery Data
+  // 5 Skills Mastery Data
   const kanaCount = overview?.kana?.total ?? 0
   const kanaPercent = Math.min(Math.round((kanaCount / 92) * 100), 100)
   const vocabCount = overview?.vocabulary?.tracked ?? 0
   const vocabMastered = overview?.vocabulary?.mastered ?? 0
   const flashcardTotal = overview?.flashcards?.total ?? 0
+  const kanjiCount = overview?.kanji?.tracked ?? 0
 
   return (
     <section className="dashboard-charts-card" aria-label="Biểu đồ thống kê học tập">
       <header className="dashboard-charts-header">
         <div>
-          <span className="ui-eyebrow">Phân tích trực quan</span>
+          <span className="ui-eyebrow">PHÂN TÍCH TRỰC QUAN</span>
           <h2 className="dashboard-charts-title">Thống kê & Nhịp độ học tập</h2>
         </div>
 
@@ -116,7 +121,7 @@ export function DashboardCharts({ activity, overview }) {
             className={`dashboard-charts-tab ${activeTab === 'skills' ? 'active' : ''}`}
             onClick={() => setActiveTab('skills')}
           >
-            ⚡ Cân bằng kỹ năng
+            ⚖️ Cân bằng 5 kỹ năng
           </button>
         </nav>
       </header>
@@ -217,7 +222,7 @@ export function DashboardCharts({ activity, overview }) {
         </div>
       ) : null}
 
-      {/* Tab 2: JLPT Donut & Level Distribution */}
+      {/* Tab 2: JLPT Donut & Level Distribution (Matching User Screenshot!) */}
       {activeTab === 'jlpt' ? (
         <div
           role="tabpanel"
@@ -239,7 +244,7 @@ export function DashboardCharts({ activity, overview }) {
                 r="64"
                 className="jlpt-donut-track"
                 fill="none"
-                strokeWidth="16"
+                strokeWidth="14"
               />
               <circle
                 cx="80"
@@ -247,7 +252,7 @@ export function DashboardCharts({ activity, overview }) {
                 r="64"
                 className="jlpt-donut-progress"
                 fill="none"
-                strokeWidth="16"
+                strokeWidth="14"
                 strokeDasharray="402"
                 strokeDashoffset={402 - (402 * jlptOverallRate) / 100}
                 strokeLinecap="round"
@@ -264,8 +269,8 @@ export function DashboardCharts({ activity, overview }) {
             <div className="jlpt-donut-info">
               <h3>Tổng tiến độ giáo trình</h3>
               <p>
-                Bạn đã hoàn thành <strong>{completedJlptLessons}</strong> trên tổng số{' '}
-                <strong>{totalJlptLessons}</strong> bài học chuẩn JLPT hiện có.
+                Bạn đã hoàn thành <strong>{completedJlptLessons}</strong> bài trong số{' '}
+                <strong>{totalJlptLessons}</strong> bài học chuẩn JLPT, trình độ N5.
               </p>
             </div>
           </div>
@@ -274,35 +279,31 @@ export function DashboardCharts({ activity, overview }) {
             <h4>Chi tiết từng cấp độ</h4>
             <div className="jlpt-bars-stack">
               {levelProgress.map((lvl) => {
-                const color = LEVEL_COLORS[lvl.level] || '#3b82f6'
-                const isHovered = hoveredLevel === lvl.level
+                const hasProgress = lvl.completionRate > 0
 
                 return (
                   <div
                     key={lvl.level}
-                    className={`jlpt-bar-item ${isHovered ? 'active' : ''}`}
-                    onMouseEnter={() => setHoveredLevel(lvl.level)}
-                    onMouseLeave={() => setHoveredLevel(null)}
+                    className={`jlpt-bar-item ${hasProgress ? 'has-progress' : ''}`}
                   >
                     <div className="jlpt-bar-header">
-                      <span className="jlpt-bar-tag" style={{ backgroundColor: `${color}20`, color }}>
+                      <span className={`jlpt-bar-level-name ${hasProgress ? 'accent' : ''}`}>
                         {lvl.level}
                       </span>
-                      <span className="jlpt-bar-counts">
-                        {lvl.completedLessons}/{lvl.totalLessons} bài
-                      </span>
-                      <strong className="jlpt-bar-percent" style={{ color }}>
-                        {lvl.completionRate}%
-                      </strong>
+                      <div className="jlpt-bar-meta">
+                        <span className="jlpt-bar-counts">
+                          {lvl.completedLessons}/{lvl.totalLessons} bài
+                        </span>
+                        <strong className={`jlpt-bar-percent ${hasProgress ? 'accent' : ''}`}>
+                          {lvl.completionRate}%
+                        </strong>
+                      </div>
                     </div>
 
                     <div className="jlpt-bar-bg" aria-hidden="true">
                       <div
                         className="jlpt-bar-fill"
-                        style={{
-                          width: `${lvl.completionRate}%`,
-                          backgroundColor: color,
-                        }}
+                        style={{ width: `${lvl.completionRate}%` }}
                       />
                     </div>
                   </div>
@@ -313,7 +314,7 @@ export function DashboardCharts({ activity, overview }) {
         </div>
       ) : null}
 
-      {/* Tab 3: Skills Mastery Radar / Gauges */}
+      {/* Tab 3: 5 Skills Mastery Pillars */}
       {activeTab === 'skills' ? (
         <div
           role="tabpanel"
@@ -322,9 +323,9 @@ export function DashboardCharts({ activity, overview }) {
           className="dashboard-charts-body skills-layout"
         >
           <div className="skills-grid">
-            {/* Kana Pillar */}
+            {/* 1. Kana */}
             <article className="skill-meter-card">
-              <div className="skill-meter-icon kana-icon">あ</div>
+              <div className="skill-meter-icon" lang="ja">あ</div>
               <div className="skill-meter-content">
                 <div className="skill-meter-header">
                   <strong>Bảng chữ Kana</strong>
@@ -332,21 +333,19 @@ export function DashboardCharts({ activity, overview }) {
                 </div>
                 <div className="skill-meter-track" aria-hidden="true">
                   <div
-                    className="skill-meter-fill fill-pink"
+                    className="skill-meter-fill"
                     style={{ width: `${kanaPercent}%` }}
                   />
                 </div>
                 <p className="skill-meter-tip">
-                  {kanaPercent >= 100
-                    ? '🎉 Xuất sắc! Bạn đã làm chủ trọn vẹn cả 2 bảng Hiragana & Katakana.'
-                    : 'Luyện lật thẻ và viết đều đặn để tự tin nhận diện mặt chữ.'}
+                  Làm chủ cả 2 bảng Hiragana và Katakana để đọc nhanh và chính xác.
                 </p>
               </div>
             </article>
 
-            {/* JLPT Lessons Pillar */}
+            {/* 2. JLPT Lessons */}
             <article className="skill-meter-card">
-              <div className="skill-meter-icon lesson-icon">学</div>
+              <div className="skill-meter-icon" lang="ja">学</div>
               <div className="skill-meter-content">
                 <div className="skill-meter-header">
                   <strong>Ngữ pháp & Bài học</strong>
@@ -354,19 +353,19 @@ export function DashboardCharts({ activity, overview }) {
                 </div>
                 <div className="skill-meter-track" aria-hidden="true">
                   <div
-                    className="skill-meter-fill fill-blue"
+                    className="skill-meter-fill"
                     style={{ width: `${jlptOverallRate}%` }}
                   />
                 </div>
                 <p className="skill-meter-tip">
-                  Nắm vững các mẫu câu và hoàn thành trắc nghiệm cuối mỗi bài học.
+                  Nắm vững các mẫu câu theo lộ trình và hoàn thành bài kiểm tra cuối bài.
                 </p>
               </div>
             </article>
 
-            {/* Vocabulary Pillar */}
+            {/* 3. Vocabulary */}
             <article className="skill-meter-card">
-              <div className="skill-meter-icon vocab-icon">語</div>
+              <div className="skill-meter-icon" lang="ja">語</div>
               <div className="skill-meter-content">
                 <div className="skill-meter-header">
                   <strong>Kho từ vựng</strong>
@@ -374,7 +373,7 @@ export function DashboardCharts({ activity, overview }) {
                 </div>
                 <div className="skill-meter-track" aria-hidden="true">
                   <div
-                    className="skill-meter-fill fill-emerald"
+                    className="skill-meter-fill"
                     style={{
                       width: `${vocabCount > 0 ? Math.min(Math.round((vocabMastered / vocabCount) * 100), 100) : 0}%`,
                     }}
@@ -386,9 +385,9 @@ export function DashboardCharts({ activity, overview }) {
               </div>
             </article>
 
-            {/* Flashcard Pillar */}
+            {/* 4. Flashcards */}
             <article className="skill-meter-card">
-              <div className="skill-meter-icon card-icon">覚</div>
+              <div className="skill-meter-icon" lang="ja">覚</div>
               <div className="skill-meter-content">
                 <div className="skill-meter-header">
                   <strong>Thẻ ghi nhớ Flashcard</strong>
@@ -396,12 +395,32 @@ export function DashboardCharts({ activity, overview }) {
                 </div>
                 <div className="skill-meter-track" aria-hidden="true">
                   <div
-                    className="skill-meter-fill fill-violet"
+                    className="skill-meter-fill"
                     style={{ width: `${Math.min(flashcardTotal * 10, 100)}%` }}
                   />
                 </div>
                 <p className="skill-meter-tip">
                   Lặp lại ngắt quãng (SRS) giúp kiến thức đi sâu vào trí nhớ dài hạn.
+                </p>
+              </div>
+            </article>
+
+            {/* 5. Kanji & Handwriting */}
+            <article className="skill-meter-card">
+              <div className="skill-meter-icon" lang="ja">字</div>
+              <div className="skill-meter-content">
+                <div className="skill-meter-header">
+                  <strong>Luyện viết chữ Hán & Kana</strong>
+                  <span className="skill-meter-score">{kanjiCount} chữ đã luyện</span>
+                </div>
+                <div className="skill-meter-track" aria-hidden="true">
+                  <div
+                    className="skill-meter-fill"
+                    style={{ width: `${Math.min(kanjiCount * 10, 100)}%` }}
+                  />
+                </div>
+                <p className="skill-meter-tip">
+                  Luyện viết đúng thứ tự nét bút giúp nhận diện và ghi nhớ mặt chữ bền vững.
                 </p>
               </div>
             </article>

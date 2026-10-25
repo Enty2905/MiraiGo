@@ -62,6 +62,7 @@ async function findUserById(userId) {
       timezone,
       current_level AS "currentLevel",
       avatar_url AS "avatarUrl",
+      created_at AS "createdAt",
       last_login_at AS "lastLoginAt"
     FROM users
     WHERE id = $1
@@ -102,10 +103,66 @@ async function updateUserPassword(userId, newPasswordHash) {
   return rows[0] || null;
 }
 
+async function updateUserProfile(userId, { fullName, displayName, avatarUrl, currentLevel, timezone } = {}) {
+  const fields = [];
+  const values = [userId];
+  let idx = 2;
+
+  if (fullName !== undefined) {
+    fields.push(`full_name = $${idx++}`);
+    values.push(fullName);
+  }
+  if (displayName !== undefined) {
+    fields.push(`display_name = $${idx++}`);
+    values.push(displayName);
+  }
+  if (avatarUrl !== undefined) {
+    fields.push(`avatar_url = $${idx++}`);
+    values.push(avatarUrl);
+  }
+  if (currentLevel !== undefined) {
+    fields.push(`current_level = $${idx++}`);
+    values.push(currentLevel);
+  }
+  if (timezone !== undefined) {
+    fields.push(`timezone = $${idx++}`);
+    values.push(timezone);
+  }
+
+  if (fields.length === 0) {
+    return findUserById(userId);
+  }
+
+  fields.push('updated_at = NOW()');
+
+  const query = `
+    UPDATE users
+    SET ${fields.join(', ')}
+    WHERE id = $1
+    RETURNING
+      id,
+      email,
+      full_name AS "fullName",
+      display_name AS "displayName",
+      role,
+      status,
+      timezone,
+      current_level AS "currentLevel",
+      avatar_url AS "avatarUrl",
+      created_at AS "createdAt",
+      last_login_at AS "lastLoginAt"
+  `;
+
+  const { rows } = await pool.query(query, values);
+  return rows[0] || null;
+}
+
 module.exports = {
   createUser,
   findUserByEmail,
   findUserById,
   findUserWithPasswordById,
   updateUserPassword,
+  updateUserProfile,
 };
+
