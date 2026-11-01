@@ -65,14 +65,90 @@ function SparkIcon(props) {
   )
 }
 
-function playText(text) {
+function LightbulbIcon(props) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" aria-hidden="true" {...props}>
+      <path
+        d="M9 18h6m-4 3h2M12 2a7 7 0 0 0-7 7c0 2.38 1.19 4.47 3 5.74V17a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1v-2.26c1.81-1.27 3-3.36 3-5.74a7 7 0 0 0-7-7Z"
+        stroke="currentColor"
+        strokeWidth="1.8"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  )
+}
+
+function BookOpenIcon(props) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" aria-hidden="true" {...props}>
+      <path
+        d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2V3Zm20 0h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7V3Z"
+        stroke="currentColor"
+        strokeWidth="1.8"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  )
+}
+
+function ChatIcon(props) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" aria-hidden="true" {...props}>
+      <path
+        d="M7.9 20A9 9 0 1 0 4 16.1L2 22Z"
+        stroke="currentColor"
+        strokeWidth="1.8"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  )
+}
+
+function TurtleIcon(props) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" aria-hidden="true" {...props}>
+      <path
+        d="M12 7c3.3 0 6 2.7 6 6 0 1-.2 2-.7 2.8l2.2 1.4a1 1 0 0 1-.5 1.8H5a1 1 0 0 1-.5-1.8l2.2-1.4c-.5-.8-.7-1.8-.7-2.8 0-3.3 2.7-6 6-6Z"
+        stroke="currentColor"
+        strokeWidth="1.6"
+        strokeLinejoin="round"
+      />
+      <circle cx="12" cy="4" r="2" stroke="currentColor" strokeWidth="1.6" />
+      <path d="M9 11l3 3 3-3" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  )
+}
+
+function formatWordType(type) {
+  if (!type) return 'Từ vựng'
+  const lower = String(type).toLowerCase().trim()
+  const map = {
+    noun: 'Danh từ',
+    verb: 'Động từ',
+    adjective: 'Tính từ',
+    'na-adjective': 'Tính từ đuôi な',
+    'i-adjective': 'Tính từ đuôi い',
+    adverb: 'Phó từ',
+    expression: 'Thành ngữ / Quán ngữ',
+    greeting: 'Lời chào xã giao',
+    particle: 'Trợ từ',
+    pronoun: 'Đại từ',
+    counter: 'Lượng từ',
+  }
+  return map[lower] || type
+}
+
+function playText(text, rate = 0.9) {
   if (!text || typeof window === 'undefined' || !('speechSynthesis' in window)) {
     return
   }
 
   const utterance = new window.SpeechSynthesisUtterance(text)
   utterance.lang = 'ja-JP'
-  utterance.rate = 0.9
+  utterance.rate = rate
   window.speechSynthesis.cancel()
   window.speechSynthesis.speak(utterance)
 }
@@ -90,6 +166,11 @@ function splitReading(reading) {
 
 function getDisplayMeaning(item) {
   return item?.meaningVi || item?.meaningEn || 'Chưa có nghĩa.'
+}
+
+function getFlashcardBackMeaning(item) {
+  const raw = item?.meaningVi || item?.meaningEn || 'Chưa có nghĩa.'
+  return raw.replace(/\s*[（(][^）)]*[）)]\s*/g, '').trim() || raw
 }
 
 function readGuestHistory() {
@@ -296,26 +377,77 @@ function VocabularyResult({ vocabulary, relatedKanji, query, onQuickSaveWord }) 
     return <NoResult query={query} label="từ vựng" />
   }
 
+  // Compute combined Hán-Việt for the vocabulary word
+  const computedHanViet =
+    primaryWord.hanViet ||
+    (relatedKanji && relatedKanji.length > 0
+      ? relatedKanji
+          .filter((k) => primaryWord.word.includes(k.kanji) && k.hanViet)
+          .map((k) => k.hanViet.split(/[,/]/)[0].trim())
+          .join(' ')
+      : '')
+
   return (
     <div className="dictionary-result-grid">
       <section className="dictionary-panel dictionary-entry-panel">
         <header className="dictionary-entry-header">
-          <h2 lang="ja">{primaryWord.word}</h2>
-          <p>
-            {primaryWord.kana ? `「${primaryWord.kana}」` : null}
-            {primaryWord.hanViet ? ` 「${primaryWord.hanViet}」` : null}
-          </p>
-          <button
-            type="button"
-            className="dictionary-audio-link"
-            onClick={() => playText(primaryWord.word)}
-          >
-            <VolumeIcon />
-            <span>{primaryWord.kana || primaryWord.romaji || primaryWord.word}</span>
-          </button>
+          <div className="dictionary-header-top-row">
+            <h2 lang="ja" className="dictionary-word-title">{primaryWord.word}</h2>
+            <div className="dictionary-badges-wrap">
+              <span className="dictionary-badge dictionary-badge--type">
+                {formatWordType(primaryWord.wordType)}
+              </span>
+              {primaryWord.jlptLevel && (
+                <span className={`dictionary-badge dictionary-badge--jlpt jlpt-${primaryWord.jlptLevel.toLowerCase()}`}>
+                  {primaryWord.jlptLevel}
+                </span>
+              )}
+              {Array.isArray(primaryWord.tags) &&
+                primaryWord.tags.map((tag) => (
+                  <span key={tag} className="dictionary-badge dictionary-badge--tag">
+                    {tag}
+                  </span>
+                ))}
+            </div>
+          </div>
+
+          <div className="dictionary-pronounce-row">
+            {primaryWord.kana && (
+              <span className="dictionary-kana-bracket">「{primaryWord.kana}」</span>
+            )}
+            {primaryWord.romaji && (
+              <span className="dictionary-romaji-bracket">[{primaryWord.romaji}]</span>
+            )}
+            {computedHanViet && (
+              <span className="dictionary-hanviet-tag">
+                Hán-Việt: <strong>{computedHanViet}</strong>
+              </span>
+            )}
+          </div>
+
+          <div className="dictionary-audio-actions">
+            <button
+              type="button"
+              className="dictionary-audio-pill"
+              onClick={() => playText(primaryWord.word, 0.9)}
+              title="Nghe phát âm chuẩn"
+            >
+              <VolumeIcon />
+              <span>Phát âm chuẩn</span>
+            </button>
+            <button
+              type="button"
+              className="dictionary-audio-pill dictionary-audio-pill--slow"
+              onClick={() => playText(primaryWord.word, 0.6)}
+              title="Nghe phát âm chậm"
+            >
+              <TurtleIcon />
+              <span>Đọc chậm</span>
+            </button>
+          </div>
         </header>
 
-        {onQuickSaveWord ? (
+        {onQuickSaveWord && (
           <div className="dictionary-action-row">
             <button
               type="button"
@@ -327,51 +459,109 @@ function VocabularyResult({ vocabulary, relatedKanji, query, onQuickSaveWord }) 
               <span>Lưu nhanh vào Flashcard</span>
             </button>
           </div>
-        ) : null}
+        )}
 
-
-
+        {/* 1. Định nghĩa chi tiết (Mazii-style Detailed Definitions) */}
         <section className="dictionary-meaning-section">
-          <div className="dictionary-meaning-head">
-            <h2>{primaryWord.wordType || 'Từ vựng'}</h2>
-            <span>{primaryWord.jlptLevel || 'JLPT'}</span>
+          <div className="dictionary-section-heading">
+            <BookOpenIcon className="dictionary-section-heading-icon" />
+            <h3>Định nghĩa từ vựng</h3>
           </div>
 
-          <MeaningItem title={getDisplayMeaning(primaryWord)}>
-            {wordExamples[0] ? (
-              <>
-                <p className="dictionary-japanese-line">{wordExamples[0].exampleJp}</p>
-                <p>{wordExamples[0].exampleVi}</p>
-              </>
-            ) : primaryWord.notes ? (
-              <p>{primaryWord.notes}</p>
-            ) : null}
-          </MeaningItem>
-
-          {wordExamples.slice(1, 3).map((example) => (
-            <MeaningItem key={example.id} title={example.exampleVi}>
-              <p className="dictionary-japanese-line">{example.exampleJp}</p>
-              {example.exampleKana ? <p>{example.exampleKana}</p> : null}
-            </MeaningItem>
-          ))}
+          <div className="dictionary-definition-block">
+            <span className="dict-def-index">①</span>
+            <div className="dict-def-body">
+              <p className="dict-def-text">{getDisplayMeaning(primaryWord)}</p>
+              {primaryWord.meaningEn && (
+                <p className="dict-def-en">
+                  <em>Tiếng Anh:</em> {primaryWord.meaningEn}
+                </p>
+              )}
+            </div>
+          </div>
         </section>
 
-        {primaryWord.imageUrl ? (
+        {/* 2. Điểm lưu ý văn hóa & Ngữ cảnh sử dụng (Mazii Cultural & Usage Notes Callout) */}
+        {primaryWord.notes && (
+          <section className="dictionary-culture-callout">
+            <div className="dictionary-culture-callout-head">
+              <LightbulbIcon className="dictionary-culture-callout-icon" />
+              <h4>Điểm lưu ý văn hóa & Cách dùng</h4>
+            </div>
+            <div className="dictionary-culture-callout-body">
+              {primaryWord.notes.split('\n').map((paragraph, index) => (
+                <p key={index}>{paragraph}</p>
+              ))}
+            </div>
+          </section>
+        )}
+
+        {/* 3. Câu ví dụ thực tế (Mazii Examples with Furigana & Audio) */}
+        {wordExamples.length > 0 && (
+          <section className="dictionary-examples-section">
+            <div className="dictionary-section-heading">
+              <ChatIcon className="dictionary-section-heading-icon" />
+              <h3>
+                Ví dụ thực tế <span>({wordExamples.length} câu)</span>
+              </h3>
+            </div>
+
+            <div className="dictionary-examples-list">
+              {wordExamples.map((example, idx) => (
+                <div key={example.id || idx} className="dictionary-example-card">
+                  <div className="dict-example-top">
+                    <span className="dict-example-badge">Ví dụ {idx + 1}</span>
+                    <button
+                      type="button"
+                      className="dict-example-speak-btn"
+                      onClick={() => playText(example.exampleJp, 0.85)}
+                      title="Nghe câu tiếng Nhật"
+                    >
+                      <VolumeIcon />
+                      <span>Nghe câu</span>
+                    </button>
+                  </div>
+                  <div className="dict-example-jp">{example.exampleJp}</div>
+                  {example.exampleKana && (
+                    <div className="dict-example-kana">{example.exampleKana}</div>
+                  )}
+                  <div className="dict-example-vi">{example.exampleVi}</div>
+                </div>
+              ))}
+            </div>
+          </section>
+        )}
+
+        {primaryWord.imageUrl && (
           <section className="dictionary-image-section">
-            <h2>Ảnh minh họa</h2>
+            <h3>Ảnh minh họa</h3>
             <img src={primaryWord.imageUrl} alt={`Minh họa cho ${primaryWord.word}`} />
           </section>
-        ) : null}
+        )}
       </section>
 
       <aside className="dictionary-side-column">
+        {relatedKanji.length > 0 && (
+          <section className="dictionary-panel dictionary-kanji-side-panel">
+            <div className="dictionary-side-head">
+              <h2>Các chữ Hán của {primaryWord.word}</h2>
+              <span className="dictionary-side-badge">{relatedKanji.length} chữ</span>
+            </div>
+            {relatedKanji.map((kanji) => (
+              <KanjiMiniCard key={kanji.id} kanji={kanji} />
+            ))}
+          </section>
+        )}
+
         <section className="dictionary-panel dictionary-lookup-panel">
-          <h2>Các từ vựng liên quan tới {query}</h2>
+          <div className="dictionary-side-head">
+            <h2>Các từ vựng liên quan</h2>
+          </div>
           {vocabulary.slice(0, 6).map((item) => (
             <article key={item.id} className="dictionary-lookup-item">
               <div className="dictionary-lookup-item-top">
                 <Link to={`/dictionary?q=${encodeURIComponent(item.word)}&type=vocabulary`}>{item.word}</Link>
-                {onQuickSaveWord ? (
+                {onQuickSaveWord && (
                   <button
                     type="button"
                     className="dictionary-lookup-save-btn"
@@ -381,33 +571,15 @@ function VocabularyResult({ vocabulary, relatedKanji, query, onQuickSaveWord }) 
                   >
                     <BookmarkIcon className="dictionary-lookup-save-icon" />
                   </button>
-                ) : null}
+                )}
               </div>
               <p>{getDisplayMeaning(item)}</p>
               <small>{item.kana || item.romaji}</small>
             </article>
           ))}
         </section>
-
-        {relatedKanji.length > 0 ? (
-          <section className="dictionary-panel dictionary-kanji-side-panel">
-            <h2>Các chữ kanji của {primaryWord.word}</h2>
-            {relatedKanji.map((kanji) => (
-              <KanjiMiniCard key={kanji.id} kanji={kanji} />
-            ))}
-          </section>
-        ) : null}
       </aside>
     </div>
-  )
-}
-
-function MeaningItem({ title, children }) {
-  return (
-    <article className="dictionary-meaning-item">
-      <h3>{title}</h3>
-      <div>{children}</div>
-    </article>
   )
 }
 
@@ -474,7 +646,10 @@ function KanjiResult({ kanji, query }) {
 
       <aside className="dictionary-side-column">
         <section className="dictionary-panel dictionary-lookup-panel">
-          <h2>Kết quả tra cứu kanji</h2>
+          <div className="dictionary-side-head">
+            <h2>Kết quả tra cứu kanji</h2>
+            <span className="dictionary-side-badge">{kanji.length} chữ</span>
+          </div>
           {kanji.slice(0, 8).map((item) => (
             <article
               key={item.id}
@@ -652,7 +827,10 @@ export function DictionaryPage({ redirectToDictionary = false }) {
       <DashboardNav navItems={NAV_ITEMS} />
 
       <main className="dictionary-main" id="main-content" tabIndex={-1}>
-        <header className="workspace-heading"><span className="ui-eyebrow">SỔ TỪ VỰNG</span><h1>Từ điển Nhật – Việt</h1><p>Hiểu một từ. Mở thêm một cách diễn đạt.</p></header>
+        <header className="workspace-heading">
+          <span className="ui-eyebrow">SỔ TỪ VỰNG</span>
+          <h1>Từ điển Nhật – Việt</h1>
+        </header>
         <DictionarySearchBox
           activeType={activeType}
           key={queryParam}
@@ -693,7 +871,7 @@ export function DictionaryPage({ redirectToDictionary = false }) {
         isOpen={Boolean(quickSaveWord)}
         onClose={() => setQuickSaveWord(null)}
         initialFront={quickSaveWord?.word || ''}
-        initialBack={`${quickSaveWord?.kana ? `${quickSaveWord.kana} ` : ''}${quickSaveWord?.romaji ? `(${quickSaveWord.romaji}) - ` : '- '}${getDisplayMeaning(quickSaveWord)}`}
+        initialBack={`${quickSaveWord?.kana ? `${quickSaveWord.kana} ` : ''}${quickSaveWord?.romaji ? `(${quickSaveWord.romaji}) - ` : '- '}${getFlashcardBackMeaning(quickSaveWord)}`}
         vocabularyId={quickSaveWord?.id}
       />
     </div>

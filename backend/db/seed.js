@@ -2,6 +2,7 @@ const fs = require('node:fs');
 const path = require('node:path');
 const { Client } = require('pg');
 require('dotenv').config();
+const { seedCultureDictionary } = require('./seed-culture-dictionary');
 
 const SEED_LESSONS = [
   // ==========================================
@@ -902,6 +903,7 @@ async function main() {
     await seedLessonsFromVocabulary(client);
     await seedLessonVocabularyLinks(client);
     await seedLessonGrammarLinks(client);
+    await seedCultureDictionary(client);
     await client.query('COMMIT');
 
     console.log('[DB SETUP] Schema, lessons, vocabulary, and grammar seed data are ready.');
