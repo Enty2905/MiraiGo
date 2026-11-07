@@ -39,6 +39,15 @@ export async function createMyFlashcardSet(payload) {
   }
 }
 
+export async function updateMyFlashcardSet(setId, payload) {
+  try {
+    const response = await apiClient.put(`/flashcards/${setId}`, payload)
+    return response.data?.set || null
+  } catch (error) {
+    throw new Error(getErrorMessage(error), { cause: error })
+  }
+}
+
 export async function deleteMyFlashcardSet(setId) {
   try {
     await apiClient.delete(`/flashcards/${setId}`)

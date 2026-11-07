@@ -1,5 +1,6 @@
 const {
   addMyFlashcardSet,
+  editMyFlashcardSet,
   getMyFlashcardSet,
   getMyFlashcardSets,
   quickSaveVocabularyFlashcard,
@@ -37,6 +38,19 @@ async function createFlashcardSetController(req, res, next) {
 
     res.status(201).json({
       message: 'Đã tạo bộ flashcard.',
+      set: flashcardSet,
+    });
+  } catch (error) {
+    next(error);
+  }
+}
+
+async function updateFlashcardSetController(req, res, next) {
+  try {
+    const flashcardSet = await editMyFlashcardSet(req.authUser.id, req.params.setId, req.body);
+
+    res.status(200).json({
+      message: 'Đã cập nhật bộ flashcard.',
       set: flashcardSet,
     });
   } catch (error) {
@@ -86,4 +100,5 @@ module.exports = {
   getMyFlashcardSetsController,
   quickSaveFlashcardController,
   saveFlashcardReviewController,
+  updateFlashcardSetController,
 };

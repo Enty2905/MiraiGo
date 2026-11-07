@@ -251,6 +251,97 @@ async function createFlashcardSet({ userId, title, description, cards }) {
   }
 }
 
+async function updateFlashcardSet({ userId, setId, title, description, cards }) {
+  await ensureFlashcardTables();
+  const vocabularyIds = await resolveVocabularyIds(cards);
+
+  const client = await pool.connect();
+
+  try {
+    await client.query('BEGIN');
+
+    const setQuery = `
+      UPDATE user_flashcard_sets
+      SET
+        title = $1,
+        description = $2,
+        updated_at = NOW()
+      WHERE id = $3
+        AND user_id = $4
+      RETURNING
+        id,
+        title,
+        description,
+        created_at AS "createdAt",
+        updated_at AS "updatedAt"
+    `;
+
+    const { rows: setRows } = await client.query(setQuery, [
+      title,
+      description,
+      setId,
+      userId,
+    ]);
+
+    if (setRows.length === 0) {
+      await client.query('ROLLBACK');
+      return null;
+    }
+
+    const flashcardSet = setRows[0];
+
+    await client.query(
+      'DELETE FROM user_flashcards WHERE set_id = $1 AND user_id = $2',
+      [setId, userId]
+    );
+
+    const values = [];
+    const placeholders = cards.map((card, index) => {
+      const offset = index * 5;
+      const vocabularyId = vocabularyIds.get(card.frontText.toLowerCase()) || null;
+
+      values.push(userId, flashcardSet.id, vocabularyId, card.frontText, card.backText);
+      return `($${offset + 1}, $${offset + 2}, $${offset + 3}, $${offset + 4}, $${offset + 5}, NOW(), NOW())`;
+    });
+
+    const cardsQuery = `
+      INSERT INTO user_flashcards (
+        user_id,
+        set_id,
+        vocabulary_id,
+        front_text,
+        back_text,
+        created_at,
+        updated_at
+      )
+      VALUES ${placeholders.join(', ')}
+      RETURNING
+        id,
+        set_id AS "setId",
+        vocabulary_id AS "vocabularyId",
+        front_text AS "frontText",
+        back_text AS "backText",
+        created_at AS "createdAt",
+        updated_at AS "updatedAt"
+    `;
+
+    const cardsResult = await client.query(cardsQuery, values);
+
+    await client.query('COMMIT');
+
+    return {
+      ...flashcardSet,
+      cardCount: cardsResult.rows.length,
+      cards: cardsResult.rows,
+    };
+  } catch (error) {
+    await client.query('ROLLBACK');
+    throw error;
+  } finally {
+    client.release();
+  }
+}
+
 async function deleteFlashcardSet(userId, setId) {
   await ensureFlashcardTables();
 
@@ -395,4 +486,5 @@ module.exports = {
   listFlashcardSets,
   listFlashcardsBySetId,
   quickSaveFlashcard,
+  updateFlashcardSet,
 };

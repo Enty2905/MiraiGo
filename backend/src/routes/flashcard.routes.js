@@ -6,6 +6,7 @@ const {
   getMyFlashcardSetsController,
   quickSaveFlashcardController,
   saveFlashcardReviewController,
+  updateFlashcardSetController,
 } = require('../controllers/flashcard.controller');
 
 const flashcardRouter = express.Router();
@@ -14,6 +15,7 @@ flashcardRouter.get('/', getMyFlashcardSetsController);
 flashcardRouter.post('/', createFlashcardSetController);
 flashcardRouter.post('/quick-save', quickSaveFlashcardController);
 flashcardRouter.get('/:setId', getMyFlashcardSetController);
+flashcardRouter.put('/:setId', updateFlashcardSetController);
 flashcardRouter.post('/:setId/review', saveFlashcardReviewController);
 flashcardRouter.delete('/:setId', deleteFlashcardSetController);
 

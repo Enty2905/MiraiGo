@@ -6,6 +6,7 @@ const {
   listFlashcardSets,
   listFlashcardsBySetId,
   quickSaveFlashcard,
+  updateFlashcardSet,
 } = require('../models/flashcard.model');
 const {
   createLearningLog,
@@ -173,6 +174,27 @@ async function addMyFlashcardSet(userId, payload) {
   return toFlashcardSetResponse(createdSet, createdSet.cards);
 }
 
+async function editMyFlashcardSet(userId, setIdInput, payload) {
+  const setId = parsePositiveInteger(setIdInput, 'setId');
+  const title = normalizeRequiredText(payload?.title, 'title', MAX_TITLE_LENGTH);
+  const description = normalizeOptionalText(payload?.description, 'description', MAX_DESCRIPTION_LENGTH);
+  const cards = normalizeCards(payload);
+
+  const updatedSet = await updateFlashcardSet({
+    userId,
+    setId,
+    title,
+    description,
+    cards,
+  });
+
+  if (!updatedSet) {
+    throw createHttpError(404, 'Không tìm thấy bộ flashcard.');
+  }
+
+  return toFlashcardSetResponse(updatedSet, updatedSet.cards);
+}
+
 async function removeMyFlashcardSet(userId, setIdInput) {
   const setId = parsePositiveInteger(setIdInput, 'setId');
   const deletedRow = await deleteFlashcardSet(userId, setId);
@@ -271,6 +293,7 @@ async function quickSaveVocabularyFlashcard(userId, payload) {
 
 module.exports = {
   addMyFlashcardSet,
+  editMyFlashcardSet,
   getMyFlashcardSet,
   getMyFlashcardSets,
   quickSaveVocabularyFlashcard,

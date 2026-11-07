@@ -10,6 +10,7 @@ import {
   fetchMyFlashcardSet,
   fetchMyFlashcardSets,
   saveFlashcardReview,
+  updateMyFlashcardSet,
 } from '../../services/flashcard.service'
 import { NAV_ITEMS } from '../dashboard/dashboard-content'
 import '../dashboard/dashboard-page.css'
@@ -35,6 +36,14 @@ function PlusIcon(props) {
   )
 }
 
+function PencilIcon(props) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" aria-hidden="true" {...props}>
+      <path d="M16.474 5.408l2.118 2.118m-.75-3.036a2.121 2.121 0 1 1 3 3L7.5 20.828l-4.5 1.172 1.172-4.5L17.842 4.49z" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  )
+}
+
 function FolderIcon(props) {
   return (
     <svg viewBox="0 0 24 24" fill="none" aria-hidden="true" {...props}>
@@ -56,12 +65,12 @@ function getDisplayName(user) {
 }
 
 function splitByCardSeparator(text, separatorId, customSeparator) {
-  if (!text.trim()) {
+  if (!text || !text.trim()) {
     return []
   }
 
   if (separatorId === 'newline') {
-    return text.split(/\r?\n/)
+    return text.split(/\r?\n+/)
   }
 
   const selectedOption = CARD_SEPARATOR_OPTIONS.find((option) => option.id === separatorId)
@@ -81,10 +90,14 @@ function parseBulkCards({
   cardSeparatorId,
   customCardSeparator,
 }) {
+  if (!text || !text.trim()) {
+    return []
+  }
+
   const selectedOption = TERM_SEPARATOR_OPTIONS.find((option) => option.id === termSeparatorId)
   const termSeparator = termSeparatorId === 'custom' ? customTermSeparator : selectedOption?.value
 
-  if (!termSeparator) {
+  if (!termSeparator && termSeparatorId !== 'tab') {
     return []
   }
 
@@ -92,11 +105,38 @@ function parseBulkCards({
     .map((rawCard) => rawCard.trim())
     .filter(Boolean)
     .map((rawCard) => {
-      const [frontText, ...backParts] = rawCard.split(termSeparator)
+      let frontText = ''
+      let backText = ''
+
+      if (termSeparatorId === 'tab') {
+        if (rawCard.includes('\t')) {
+          const parts = rawCard.split('\t')
+          frontText = parts[0]?.trim() || ''
+          backText = parts.slice(1).join('\t').trim()
+        } else if (/\s{2,}/.test(rawCard)) {
+          const match = rawCard.match(/^(.+?)\s{2,}(.+)$/)
+          if (match) {
+            frontText = match[1]?.trim() || ''
+            backText = match[2]?.trim() || ''
+          }
+        } else if (rawCard.includes(' - ')) {
+          const parts = rawCard.split(' - ')
+          frontText = parts[0]?.trim() || ''
+          backText = parts.slice(1).join(' - ').trim()
+        } else if (rawCard.includes(': ')) {
+          const parts = rawCard.split(': ')
+          frontText = parts[0]?.trim() || ''
+          backText = parts.slice(1).join(': ').trim()
+        }
+      } else {
+        const parts = rawCard.split(termSeparator)
+        frontText = parts[0]?.trim() || ''
+        backText = parts.slice(1).join(termSeparator).trim()
+      }
 
       return {
-        frontText: frontText?.trim() || '',
-        backText: backParts.join(termSeparator).trim(),
+        frontText,
+        backText,
       }
     })
     .filter((card) => card.frontText && card.backText)
@@ -109,105 +149,170 @@ function buildBlankCard() {
   }
 }
 
-function SeparatorOption({ name, option, selectedValue, onChange }) {
-  return (
-    <label className="flashcards-radio">
-      <input
-        type="radio"
-        name={name}
-        value={option.id}
-        checked={selectedValue === option.id}
-        onChange={() => onChange(option.id)}
-      />
-      <span>{option.label}</span>
-    </label>
-  )
-}
-
-function BulkImportForm({
-  bulkText,
-  setBulkText,
-  termSeparatorId,
-  setTermSeparatorId,
-  customTermSeparator,
-  setCustomTermSeparator,
-  cardSeparatorId,
-  setCardSeparatorId,
-  customCardSeparator,
-  setCustomCardSeparator,
-  previewCards,
+function BulkImportModal({
+  isOpen,
+  onClose,
+  onImport,
 }) {
+  const [bulkText, setBulkText] = useState('')
+  const [termSeparatorId, setTermSeparatorId] = useState('tab')
+  const [cardSeparatorId, setCardSeparatorId] = useState('newline')
+  const [customTermSeparator, setCustomTermSeparator] = useState('')
+  const [customCardSeparator, setCustomCardSeparator] = useState('')
+
+  const previewCards = useMemo(
+    () => parseBulkCards({
+      text: bulkText,
+      termSeparatorId,
+      customTermSeparator,
+      cardSeparatorId,
+      customCardSeparator,
+    }),
+    [bulkText, termSeparatorId, customTermSeparator, cardSeparatorId, customCardSeparator],
+  )
+
+  if (!isOpen) {
+    return null
+  }
+
+  const handleImport = () => {
+    if (previewCards.length === 0) {
+      return
+    }
+    onImport(previewCards)
+    setBulkText('')
+  }
+
   return (
-    <div className="flashcards-import">
-      <label className="flashcards-field">
-        <span>Nhập dữ liệu</span>
-        <textarea
-          value={bulkText}
-          onChange={(event) => setBulkText(event.target.value)}
-          placeholder={'日本語\tTiếng Nhật\n学校\tTrường học\n先生\tGiáo viên'}
-        />
-      </label>
-
-      <div className="flashcards-import-options">
-        <section>
-          <h3>Giữa thuật ngữ và định nghĩa</h3>
-          {TERM_SEPARATOR_OPTIONS.map((option) => (
-            <SeparatorOption
-              key={option.id}
-              name="term-separator"
-              option={option}
-              selectedValue={termSeparatorId}
-              onChange={setTermSeparatorId}
-            />
-          ))}
-          {termSeparatorId === 'custom' ? (
-            <input
-              className="flashcards-custom-separator"
-              value={customTermSeparator}
-              onChange={(event) => setCustomTermSeparator(event.target.value)}
-              aria-label="Ký tự phân tách thuật ngữ"
-            />
-          ) : null}
-        </section>
-
-        <section>
-          <h3>Giữa các thẻ</h3>
-          {CARD_SEPARATOR_OPTIONS.map((option) => (
-            <SeparatorOption
-              key={option.id}
-              name="card-separator"
-              option={option}
-              selectedValue={cardSeparatorId}
-              onChange={setCardSeparatorId}
-            />
-          ))}
-          {cardSeparatorId === 'custom' ? (
-            <input
-              className="flashcards-custom-separator"
-              value={customCardSeparator}
-              onChange={(event) => setCustomCardSeparator(event.target.value)}
-              aria-label="Ký tự phân tách thẻ"
-            />
-          ) : null}
-        </section>
-      </div>
-
-      <section className="flashcards-preview">
-        <h3>Xem trước <span>{previewCards.length} thẻ</span></h3>
-        {previewCards.length > 0 ? (
-          <div className="flashcards-preview-list">
-            {previewCards.slice(0, 6).map((card) => (
-              <article key={`${card.frontText}-${card.backText}`}>
-                <strong>{card.frontText}</strong>
-                <span>{card.backText}</span>
-              </article>
-            ))}
+    <Dialog
+      className="quizlet-import-modal"
+      labelledBy="quizlet-import-title"
+      onClose={onClose}
+    >
+      <div className="quizlet-import-container">
+        <header className="quizlet-import-head">
+          <div>
+            <h2 id="quizlet-import-title" className="quizlet-import-title">
+              Nhập dữ liệu tự động
+            </h2>
+            <p className="quizlet-import-subtitle">Chép và dán danh sách từ vựng ở đây (từ Word, Excel, Google Docs, Quizlet, v.v.)</p>
           </div>
-        ) : (
-          <p>Không có nội dung để xem trước</p>
-        )}
-      </section>
-    </div>
+          <button
+            type="button"
+            className="quizlet-import-close-btn"
+            onClick={onClose}
+            aria-label="Đóng"
+          >
+            &times;
+          </button>
+        </header>
+
+        <div className="quizlet-import-textarea-wrap">
+          <textarea
+            className="quizlet-import-textarea"
+            value={bulkText}
+            onChange={(event) => setBulkText(event.target.value)}
+            placeholder={'Từ 1\tĐịnh nghĩa 1\nTừ 2\tĐịnh nghĩa 2\nTừ 3\tĐịnh nghĩa 3'}
+            rows={8}
+            autoFocus
+          />
+        </div>
+
+        <div className="quizlet-import-options-grid">
+          <div className="quizlet-import-col">
+            <h3 className="quizlet-import-col-title">Giữa thuật ngữ và định nghĩa</h3>
+            <div className="quizlet-import-radio-group">
+              {TERM_SEPARATOR_OPTIONS.map((option) => (
+                <label key={option.id} className="quizlet-import-radio">
+                  <input
+                    type="radio"
+                    name="modal-term-separator"
+                    value={option.id}
+                    checked={termSeparatorId === option.id}
+                    onChange={() => setTermSeparatorId(option.id)}
+                  />
+                  <span>{option.label}</span>
+                </label>
+              ))}
+            </div>
+            {termSeparatorId === 'custom' ? (
+              <input
+                className="quizlet-import-custom-input"
+                value={customTermSeparator}
+                onChange={(event) => setCustomTermSeparator(event.target.value)}
+                placeholder="Ví dụ: - hoặc :"
+                aria-label="Ký tự phân tách thuật ngữ tùy chỉnh"
+              />
+            ) : null}
+          </div>
+
+          <div className="quizlet-import-col">
+            <h3 className="quizlet-import-col-title">Giữa các thẻ</h3>
+            <div className="quizlet-import-radio-group">
+              {CARD_SEPARATOR_OPTIONS.map((option) => (
+                <label key={option.id} className="quizlet-import-radio">
+                  <input
+                    type="radio"
+                    name="modal-card-separator"
+                    value={option.id}
+                    checked={cardSeparatorId === option.id}
+                    onChange={() => setCardSeparatorId(option.id)}
+                  />
+                  <span>{option.label}</span>
+                </label>
+              ))}
+            </div>
+            {cardSeparatorId === 'custom' ? (
+              <input
+                className="quizlet-import-custom-input"
+                value={customCardSeparator}
+                onChange={(event) => setCustomCardSeparator(event.target.value)}
+                placeholder="Ví dụ: ; hoặc ///"
+                aria-label="Ký tự phân tách thẻ tùy chỉnh"
+              />
+            ) : null}
+          </div>
+        </div>
+
+        <section className="quizlet-import-preview-section">
+          <div className="quizlet-import-preview-header">
+            <h3>Xem trước</h3>
+            <span className="quizlet-import-preview-count">{previewCards.length} thẻ</span>
+          </div>
+
+          {previewCards.length > 0 ? (
+            <div className="quizlet-import-preview-list">
+              {previewCards.map((card, idx) => (
+                <div key={`preview-card-${idx + 1}`} className="quizlet-import-preview-item">
+                  <div className="quizlet-import-preview-term">{card.frontText}</div>
+                  <div className="quizlet-import-preview-def">{card.backText}</div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p className="quizlet-import-empty-notice">Không có nội dung để xem trước</p>
+          )}
+        </section>
+
+        <footer className="quizlet-import-footer">
+          <button
+            type="button"
+            className="quizlet-import-cancel-btn"
+            onClick={onClose}
+          >
+            Hủy nhập
+          </button>
+          <button
+            type="button"
+            className="quizlet-import-submit-btn"
+            disabled={previewCards.length === 0}
+            onClick={handleImport}
+          >
+            Nhập
+          </button>
+        </footer>
+      </div>
+    </Dialog>
   )
 }
 
@@ -254,40 +359,33 @@ function ManualCardsForm({ cards, onCardChange, onAddCard, onRemoveCard }) {
 }
 
 function CreateFlashcardSetDialog({
+  editingSet = null,
   isSaving,
   errorMessage,
   onClose,
   onSubmit,
+  initialImportOpen = false,
 }) {
-  const [title, setTitle] = useState('')
-  const [description, setDescription] = useState('')
-  const [mode, setMode] = useState('manual')
-  const [manualCards, setManualCards] = useState([buildBlankCard(), buildBlankCard()])
-  const [bulkText, setBulkText] = useState('')
-  const [termSeparatorId, setTermSeparatorId] = useState('tab')
-  const [cardSeparatorId, setCardSeparatorId] = useState('newline')
-  const [customTermSeparator, setCustomTermSeparator] = useState('')
-  const [customCardSeparator, setCustomCardSeparator] = useState('')
-
-  const previewCards = useMemo(
-    () => parseBulkCards({
-      text: bulkText,
-      termSeparatorId,
-      customTermSeparator,
-      cardSeparatorId,
-      customCardSeparator,
-    }),
-    [bulkText, termSeparatorId, customTermSeparator, cardSeparatorId, customCardSeparator],
-  )
-
-  const cardsToSubmit = mode === 'manual'
-    ? manualCards
-      .map((card) => ({
-        frontText: card.frontText.trim(),
-        backText: card.backText.trim(),
+  const isEditing = Boolean(editingSet?.id)
+  const [title, setTitle] = useState(editingSet?.title || '')
+  const [description, setDescription] = useState(editingSet?.description || '')
+  const [manualCards, setManualCards] = useState(() => {
+    if (editingSet?.cards && editingSet.cards.length > 0) {
+      return editingSet.cards.map((card) => ({
+        frontText: card.frontText || '',
+        backText: card.backText || '',
       }))
-      .filter((card) => card.frontText && card.backText)
-    : previewCards
+    }
+    return [buildBlankCard(), buildBlankCard()]
+  })
+  const [isImportModalOpen, setIsImportModalOpen] = useState(initialImportOpen)
+
+  const cardsToSubmit = manualCards
+    .map((card) => ({
+      frontText: card.frontText.trim(),
+      backText: card.backText.trim(),
+    }))
+    .filter((card) => card.frontText && card.backText)
 
   const handleCardChange = (index, field, value) => {
     setManualCards((currentCards) => currentCards.map((card, cardIndex) => {
@@ -306,6 +404,32 @@ function CreateFlashcardSetDialog({
     setManualCards((currentCards) => currentCards.filter((card, cardIndex) => cardIndex !== index))
   }
 
+  const handleAddCard = () => {
+    setManualCards((currentCards) => [...currentCards, buildBlankCard()])
+  }
+
+  const handleImportCards = (importedCards) => {
+    if (!importedCards || importedCards.length === 0) {
+      return
+    }
+
+    setManualCards((currentCards) => {
+      const hasNonEmptyCards = currentCards.some(
+        (card) => card.frontText.trim() || card.backText.trim(),
+      )
+      if (!hasNonEmptyCards) {
+        return importedCards
+      }
+      return [...currentCards, ...importedCards]
+    })
+
+    if (!title.trim()) {
+      setTitle(`Bộ từ vựng mới (${importedCards.length} thẻ)`)
+    }
+
+    setIsImportModalOpen(false)
+  }
+
   const handleSubmit = (event) => {
     event.preventDefault()
     onSubmit({
@@ -316,10 +440,13 @@ function CreateFlashcardSetDialog({
   }
 
   return (
-    <Dialog className="flashcards-modal" labelledBy="flashcards-modal-title" onClose={() => { if (!isSaving) onClose() }}>
+    <>
+      <Dialog className="flashcards-modal" labelledBy="flashcards-modal-title" onClose={() => { if (!isSaving) onClose() }}>
         <form onSubmit={handleSubmit}>
           <header className="flashcards-modal-head">
-            <h2 id="flashcards-modal-title">Tạo một bộ thẻ mới</h2>
+            <h2 id="flashcards-modal-title">
+              {isEditing ? 'Chỉnh sửa bộ thẻ' : 'Tạo một bộ thẻ mới'}
+            </h2>
             <button type="button" className="flashcards-close-btn" disabled={isSaving} onClick={onClose} aria-label="Đóng">
               &times;
             </button>
@@ -344,47 +471,27 @@ function CreateFlashcardSetDialog({
             </label>
           </div>
 
-          <div className="flashcards-mode-tabs" role="group" aria-label="Cách nhập flash card">
+          <div className="flashcards-card-editor-header">
+            <div className="flashcards-card-editor-header-info">
+              <h3>Danh sách thẻ ({cardsToSubmit.length})</h3>
+              <p>Nhập tay từng thẻ hoặc bấm <strong>+ Nhập</strong> để dán nhanh danh sách từ Word, Excel, Quizlet...</p>
+            </div>
             <button
               type="button"
-              aria-pressed={mode === 'manual'}
-              className={mode === 'manual' ? 'is-active' : ''}
-              onClick={() => setMode('manual')}
+              className="flashcards-quizlet-pill-btn"
+              onClick={() => setIsImportModalOpen(true)}
             >
-              Nhập tay
-            </button>
-            <button
-              type="button"
-              aria-pressed={mode === 'bulk'}
-              className={mode === 'bulk' ? 'is-active' : ''}
-              onClick={() => setMode('bulk')}
-            >
-              Nhập nhiều
+              <PlusIcon />
+              Nhập
             </button>
           </div>
 
-          {mode === 'manual' ? (
-            <ManualCardsForm
-              cards={manualCards}
-              onCardChange={handleCardChange}
-              onAddCard={() => setManualCards((currentCards) => [...currentCards, buildBlankCard()])}
-              onRemoveCard={handleRemoveCard}
-            />
-          ) : (
-            <BulkImportForm
-              bulkText={bulkText}
-              setBulkText={setBulkText}
-              termSeparatorId={termSeparatorId}
-              setTermSeparatorId={setTermSeparatorId}
-              customTermSeparator={customTermSeparator}
-              setCustomTermSeparator={setCustomTermSeparator}
-              cardSeparatorId={cardSeparatorId}
-              setCardSeparatorId={setCardSeparatorId}
-              customCardSeparator={customCardSeparator}
-              setCustomCardSeparator={setCustomCardSeparator}
-              previewCards={previewCards}
-            />
-          )}
+          <ManualCardsForm
+            cards={manualCards}
+            onCardChange={handleCardChange}
+            onAddCard={handleAddCard}
+            onRemoveCard={handleRemoveCard}
+          />
 
           {errorMessage ? <p role="alert" className="flashcards-form-error">{errorMessage}</p> : null}
 
@@ -397,15 +504,26 @@ function CreateFlashcardSetDialog({
               className="flashcards-primary-btn"
               disabled={isSaving || !title.trim() || cardsToSubmit.length === 0}
             >
-              {isSaving ? 'Đang tạo...' : `Tạo bộ ${cardsToSubmit.length} thẻ`}
+              {isSaving
+                ? (isEditing ? 'Đang lưu...' : 'Đang tạo...')
+                : (isEditing ? `Lưu thay đổi (${cardsToSubmit.length} thẻ)` : `Tạo bộ ${cardsToSubmit.length} thẻ`)}
             </button>
           </footer>
         </form>
-    </Dialog>
+      </Dialog>
+
+      {isImportModalOpen ? (
+        <BulkImportModal
+          isOpen={isImportModalOpen}
+          onClose={() => setIsImportModalOpen(false)}
+          onImport={handleImportCards}
+        />
+      ) : null}
+    </>
   )
 }
 
-function FlashcardSetCard({ flashcardSet, onDelete }) {
+function FlashcardSetCard({ flashcardSet, onEdit, onDelete }) {
   return (
     <article className="flashcards-set-card">
       <Link to={`/flashcards/${flashcardSet.id}`} className="flashcards-set-link">
@@ -419,14 +537,26 @@ function FlashcardSetCard({ flashcardSet, onDelete }) {
         </div>
       </Link>
 
-      <button
-        type="button"
-        className="flashcards-icon-btn"
-        onClick={() => onDelete(flashcardSet.id)}
-        aria-label="Xóa bộ thẻ"
-      >
-        <TrashIcon />
-      </button>
+      <div className="flashcards-set-actions">
+        <button
+          type="button"
+          className="flashcards-icon-btn flashcards-icon-btn--edit"
+          onClick={() => onEdit(flashcardSet)}
+          aria-label="Sửa bộ thẻ"
+          title="Chỉnh sửa tên và từ vựng"
+        >
+          <PencilIcon />
+        </button>
+        <button
+          type="button"
+          className="flashcards-icon-btn flashcards-icon-btn--danger"
+          onClick={() => onDelete(flashcardSet.id)}
+          aria-label="Xóa bộ thẻ"
+          title="Xóa bộ thẻ"
+        >
+          <TrashIcon />
+        </button>
+      </div>
     </article>
   )
 }
@@ -437,6 +567,8 @@ function FlashcardSetsView({
   isLoading,
   errorMessage,
   onOpenDialog,
+  onOpenImportDialog,
+  onEditSet,
   onDeleteSet,
 }) {
   return (
@@ -449,10 +581,21 @@ function FlashcardSetsView({
           <h1>Flashcard của {getDisplayName(user)}</h1>
           <p>{sets.length} bộ thẻ</p>
         </div>
-        <button type="button" className="flashcards-add-btn" onClick={onOpenDialog} aria-label="Thêm bộ thẻ">
-          <PlusIcon />
-          Tạo bộ thẻ
-        </button>
+        <div className="flashcards-hero-actions">
+          <button
+            type="button"
+            className="flashcards-quizlet-pill-btn"
+            onClick={onOpenImportDialog}
+            title="Dán từ vựng và tự tạo flashcard tự động như Quizlet"
+          >
+            <PlusIcon />
+            Nhập
+          </button>
+          <button type="button" className="flashcards-add-btn" onClick={onOpenDialog} aria-label="Thêm bộ thẻ">
+            <PlusIcon />
+            Tạo bộ thẻ
+          </button>
+        </div>
       </section>
 
       <p className="flashcards-intro">Gom những từ mới vào một bộ thẻ. Ôn lại, tự kiểm tra và ghi nhớ theo nhịp của bạn.</p>
@@ -466,6 +609,7 @@ function FlashcardSetsView({
             <FlashcardSetCard
               key={flashcardSet.id}
               flashcardSet={flashcardSet}
+              onEdit={onEditSet}
               onDelete={onDeleteSet}
             />
           ))}
@@ -596,6 +740,7 @@ function FlashcardSetDetailView({
   reviewErrorMessage,
   onSaveReview,
   onRestart,
+  onEdit,
   studyState,
   setStudyState,
 }) {
@@ -658,13 +803,24 @@ function FlashcardSetDetailView({
               <div className="flashcards-detail-icon">
                 <FolderIcon />
               </div>
-              <div>
+              <div className="flashcards-detail-title-info">
                 <h1>{flashcardSet.title}</h1>
                 <div className="flashcards-detail-meta">
                   <span>{cardCount} thẻ</span>
                   {flashcardSet.description ? <span>{flashcardSet.description}</span> : null}
                 </div>
               </div>
+              {onEdit ? (
+                <button
+                  type="button"
+                  className="flashcards-quizlet-pill-btn flashcards-detail-edit-btn"
+                  onClick={() => onEdit(flashcardSet)}
+                  title="Sửa tên, mô tả hoặc từ vựng của bộ thẻ"
+                >
+                  <PencilIcon />
+                  Sửa bộ thẻ
+                </button>
+              ) : null}
             </div>
             <div className="flashcards-detail-stats" aria-label="Thống kê bộ thẻ">
               <article>
@@ -845,6 +1001,8 @@ export function FlashcardsPage() {
   const [isDeleting, setIsDeleting] = useState(false)
   const [deleteError, setDeleteError] = useState('')
   const [isDialogOpen, setIsDialogOpen] = useState(false)
+  const [initialImportOpen, setInitialImportOpen] = useState(false)
+  const [editingSet, setEditingSet] = useState(null)
   const [isSaving, setIsSaving] = useState(false)
   const [errorMessage, setErrorMessage] = useState('')
   const [formErrorMessage, setFormErrorMessage] = useState('')
@@ -924,7 +1082,27 @@ export function FlashcardsPage() {
     return <Navigate to="/auth" replace />
   }
 
-  const handleCreateSet = async (payload) => {
+  const handleEditSet = async (flashcardSet) => {
+    setFormErrorMessage('')
+    if (flashcardSet.cards && flashcardSet.cards.length > 0) {
+      setEditingSet(flashcardSet)
+      setIsDialogOpen(true)
+      return
+    }
+
+    try {
+      setIsLoading(true)
+      const fullSet = await fetchMyFlashcardSet(flashcardSet.id)
+      setEditingSet(fullSet)
+      setIsDialogOpen(true)
+    } catch (error) {
+      setErrorMessage(error.message || 'Không thể tải chi tiết bộ thẻ để sửa.')
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  const handleSaveSet = async (payload) => {
     if (!payload.title) {
       setFormErrorMessage('Hãy nhập tên bộ thẻ.')
       return
@@ -939,10 +1117,22 @@ export function FlashcardsPage() {
     setFormErrorMessage('')
 
     try {
-      const createdSet = await createMyFlashcardSet(payload)
-      setSets((currentSets) => [createdSet, ...currentSets])
-      setIsDialogOpen(false)
-      navigate(`/flashcards/${createdSet.id}`)
+      if (editingSet?.id) {
+        const updatedSet = await updateMyFlashcardSet(editingSet.id, payload)
+        setSets((currentSets) =>
+          currentSets.map((s) => (s.id === updatedSet.id ? updatedSet : s)),
+        )
+        if (activeSet && activeSet.id === updatedSet.id) {
+          setActiveSet(updatedSet)
+        }
+        setIsDialogOpen(false)
+        setEditingSet(null)
+      } else {
+        const createdSet = await createMyFlashcardSet(payload)
+        setSets((currentSets) => [createdSet, ...currentSets])
+        setIsDialogOpen(false)
+        navigate(`/flashcards/${createdSet.id}`)
+      }
     } catch (error) {
       setFormErrorMessage(error.message)
     } finally {
@@ -1008,6 +1198,15 @@ export function FlashcardsPage() {
 
   const handleOpenDialog = () => {
     setFormErrorMessage('')
+    setEditingSet(null)
+    setInitialImportOpen(false)
+    setIsDialogOpen(true)
+  }
+
+  const handleOpenImportDialog = () => {
+    setFormErrorMessage('')
+    setEditingSet(null)
+    setInitialImportOpen(true)
     setIsDialogOpen(true)
   }
 
@@ -1029,6 +1228,7 @@ export function FlashcardsPage() {
           reviewErrorMessage={reviewErrorMessage}
           onSaveReview={handleSaveReview}
           onRestart={handleRestartStudy}
+          onEdit={handleEditSet}
           studyState={studyState}
           setStudyState={setStudyState}
         />
@@ -1039,6 +1239,8 @@ export function FlashcardsPage() {
           isLoading={isPageLoading}
           errorMessage={errorMessage}
           onOpenDialog={handleOpenDialog}
+          onOpenImportDialog={handleOpenImportDialog}
+          onEditSet={handleEditSet}
           onDeleteSet={(id) => { setDeleteError(''); setDeleteSetId(id) }}
         />
       )}
@@ -1056,10 +1258,16 @@ export function FlashcardsPage() {
       ) : null}
       {isDialogOpen ? (
         <CreateFlashcardSetDialog
+          editingSet={editingSet}
           isSaving={isSaving}
           errorMessage={formErrorMessage}
-          onClose={() => setIsDialogOpen(false)}
-          onSubmit={handleCreateSet}
+          onClose={() => {
+            setIsDialogOpen(false)
+            setInitialImportOpen(false)
+            setEditingSet(null)
+          }}
+          onSubmit={handleSaveSet}
+          initialImportOpen={initialImportOpen}
         />
       ) : null}
     </div>
