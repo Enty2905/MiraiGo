@@ -5,6 +5,7 @@ const {
   findKanjiExamples,
   findKanjiMatches,
   findRandomKanjiMemoryHints,
+  findVocabularyContainingKanji,
   findVocabularyExamples,
   findVocabularyMatches,
 } = require('../models/dictionary.model');
@@ -78,7 +79,7 @@ function mapVocabulary(row, examplesByVocabularyId) {
   };
 }
 
-function mapKanji(row, examplesByKanjiId = new Map()) {
+function mapKanji(row, examplesByKanjiId = new Map(), relatedVocab = []) {
   return {
     id: row.id,
     kanji: row.kanji,
@@ -94,6 +95,7 @@ function mapKanji(row, examplesByKanjiId = new Map()) {
     hanViet: row.hanViet || '',
     mnemonic: row.mnemonic || '',
     examples: examplesByKanjiId.get(row.id) || [],
+    relatedVocabulary: relatedVocab || [],
   };
 }
 
@@ -136,15 +138,139 @@ async function searchVocabulary(query) {
 }
 
 async function searchKanji(query) {
-  const kanjiRows = await findKanjiMatches(query, DEFAULT_LIMIT);
+  const kanjiCharacters = extractKanjiCharacters(query);
+
+  let kanjiRows = [];
+
+  // 1. If query contains multiple Kanji characters (e.g. "着物", "日本語"),
+  // prioritize fetching all constituent Kanji characters in query order
+  if (kanjiCharacters.length > 1) {
+    kanjiRows = await findKanjiByCharacters(kanjiCharacters);
+  }
+
+  // 2. Otherwise (or if compound not found), perform standard kanji search
+  // (matches single character, onyomi, kunyomi, han-viet, meaning)
+  if (kanjiRows.length === 0) {
+    kanjiRows = await findKanjiMatches(query, DEFAULT_LIMIT);
+  }
+
+  // 3. Fallback: If still not found and query contains at least 1 kanji (e.g. "食べる", "行く")
+  if (kanjiRows.length === 0 && kanjiCharacters.length > 0) {
+    kanjiRows = await findKanjiByCharacters(kanjiCharacters);
+  }
+
+  // 4. Fallback: If still not found, check if query matches a vocabulary word
+  // (e.g. user typed "kimono", "きもの" or "gakkou" in the Kanji tab)
+  if (kanjiRows.length === 0) {
+    const vocabRows = await findVocabularyMatches(query, 1);
+    if (vocabRows.length > 0) {
+      const vocabKanji = extractKanjiCharacters(vocabRows[0].word);
+      if (vocabKanji.length > 0) {
+        kanjiRows = await findKanjiByCharacters(vocabKanji);
+      }
+    }
+  }
+
   const kanjiIds = kanjiRows.map((row) => row.id);
   const exampleRows = await findKanjiExamples(kanjiIds);
   const examplesByKanjiId = groupRowsById(exampleRows, 'kanjiId');
 
+  const relatedVocabByKanji = new Map();
+  await Promise.all(
+    kanjiRows.map(async (row) => {
+      try {
+        const vocabList = await findVocabularyContainingKanji(row.kanji, 6);
+        relatedVocabByKanji.set(row.kanji, vocabList);
+      } catch {
+        relatedVocabByKanji.set(row.kanji, []);
+      }
+    })
+  );
+
   return {
     vocabulary: [],
-    kanji: kanjiRows.map((row) => mapKanji(row, examplesByKanjiId)),
+    kanji: kanjiRows.map((row) =>
+      mapKanji(row, examplesByKanjiId, relatedVocabByKanji.get(row.kanji) || [])
+    ),
   };
+}
+
+const kanjiStrokesCache = new Map();
+
+async function getKanjiStrokes(kanjiInput) {
+  const char = (kanjiInput || '').trim()[0];
+  if (!char) {
+    throw createHttpError(400, 'Ký tự kanji không hợp lệ.');
+  }
+
+  if (kanjiStrokesCache.has(char)) {
+    return kanjiStrokesCache.get(char);
+  }
+
+  const hex = char.codePointAt(0).toString(16).padStart(5, '0');
+  let svgText = '';
+
+  try {
+    const response = await fetch(`https://cdn.jsdelivr.net/gh/KanjiVG/kanjivg@master/kanji/${hex}.svg`, {
+      signal: AbortSignal.timeout(4000),
+    });
+    if (response.ok) {
+      svgText = await response.text();
+    }
+  } catch {
+    // Network or timeout, try fallback
+  }
+
+  if (!svgText) {
+    try {
+      const fallbackResponse = await fetch(`https://raw.githubusercontent.com/KanjiVG/kanjivg/master/kanji/${hex}.svg`, {
+        signal: AbortSignal.timeout(4000),
+      });
+      if (fallbackResponse.ok) {
+        svgText = await fallbackResponse.text();
+      }
+    } catch {
+      // Ignore
+    }
+  }
+
+  if (!svgText) {
+    return {
+      kanji: char,
+      hex,
+      strokeCount: 0,
+      paths: [],
+      numbers: [],
+    };
+  }
+
+  const paths = [];
+  const pathRegex = /<path[^>]*d="([^"]+)"/g;
+  let match;
+  while ((match = pathRegex.exec(svgText)) !== null) {
+    paths.push(match[1]);
+  }
+
+  const numbers = [];
+  const numRegex = /<text[^>]*transform="matrix\([^)]+\s+([\d.]+)\s+([\d.]+)\)"[^>]*>(\d+)<\/text>/g;
+  while ((match = numRegex.exec(svgText)) !== null) {
+    numbers.push({
+      number: parseInt(match[3], 10),
+      x: parseFloat(match[1]),
+      y: parseFloat(match[2]),
+    });
+  }
+
+  const result = {
+    kanji: char,
+    hex,
+    strokeCount: paths.length,
+    paths,
+    numbers,
+  };
+
+  kanjiStrokesCache.set(char, result);
+  return result;
 }
 
 async function getDictionarySearchHistory(userId) {
@@ -199,6 +325,7 @@ async function searchDictionary(typeInput, queryInput, userId = null) {
 
 module.exports = {
   getDictionarySearchHistory,
+  getKanjiStrokes,
   getRandomKanjiMemoryHints,
   searchDictionary,
 };

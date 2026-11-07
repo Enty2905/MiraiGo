@@ -1,5 +1,6 @@
 const {
   getDictionarySearchHistory,
+  getKanjiStrokes,
   getRandomKanjiMemoryHints,
   searchDictionary,
 } = require('../services/dictionary.service');
@@ -9,6 +10,16 @@ async function searchDictionaryController(req, res, next) {
     const result = await searchDictionary(req.query.type, req.query.q, req.authUser?.id);
 
     res.status(200).json(result);
+  } catch (error) {
+    next(error);
+  }
+}
+
+async function getKanjiStrokesController(req, res, next) {
+  try {
+    const strokes = await getKanjiStrokes(req.params.kanji);
+
+    res.status(200).json(strokes);
   } catch (error) {
     next(error);
   }
@@ -41,5 +52,6 @@ async function getKanjiMemoryHintsController(req, res, next) {
 module.exports = {
   getDictionarySearchHistoryController,
   getKanjiMemoryHintsController,
+  getKanjiStrokesController,
   searchDictionaryController,
 };

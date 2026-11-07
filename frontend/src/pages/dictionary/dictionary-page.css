@@ -946,6 +946,21 @@
   line-height: 1.4;
 }
 
+.dictionary-kanji-mini-card-link {
+  display: block;
+  text-decoration: none;
+  color: inherit;
+  transition: background 0.15s ease;
+}
+
+.dictionary-kanji-mini-card-link + .dictionary-kanji-mini-card-link {
+  border-top: 1px solid var(--stroke);
+}
+
+.dictionary-kanji-mini-card-link:hover {
+  background: var(--surface-inset, #faf7f2);
+}
+
 .dictionary-kanji-mini-card {
   padding: 16px 18px;
 }
@@ -981,9 +996,123 @@
 .dictionary-kanji-header {
   border-bottom: 1px solid var(--stroke);
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 220px;
-  gap: 22px;
-  padding: 4px 0 16px;
+  grid-template-columns: minmax(0, 1fr) 280px;
+  gap: 24px;
+  align-items: start;
+  padding: 4px 0 24px;
+}
+
+.dictionary-kanji-header-main {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.dictionary-kanji-title {
+  margin: 0;
+  font-size: 56px;
+  line-height: 1;
+  color: var(--accent, #a93a2b);
+  font-family: "Noto Serif JP", serif;
+}
+
+.dictionary-kanji-hanviet {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--text-main);
+}
+
+.dictionary-kanji-subtags {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-top: 6px;
+}
+
+.dictionary-kanji-header-animator {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.dictionary-mnemonic-text {
+  background: #fef9c3;
+  border-left: 4px solid #eab308;
+  padding: 12px 16px;
+  border-radius: 6px;
+  color: #713f12;
+  font-size: 15px;
+  line-height: 1.6;
+  margin: 0;
+}
+
+/* Related Vocabulary Compounds */
+.dictionary-kanji-vocab-compounds {
+  padding: 22px 0;
+  border-bottom: 1px solid var(--stroke);
+}
+
+.dict-kanji-vocab-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
+  gap: 12px;
+  margin-top: 14px;
+}
+
+.dict-kanji-vocab-card {
+  padding: 12px 14px;
+  background: var(--surface-inset, #faf7f2);
+  border: 1px solid var(--stroke, #e6ded3);
+  border-radius: 8px;
+  transition: all 0.15s ease;
+}
+
+.dict-kanji-vocab-card:hover {
+  background: #ffffff;
+  border-color: var(--dict-green-border, #a8c7b8);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+}
+
+.dict-kanji-vocab-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.dict-kanji-vocab-word {
+  font-size: 17px;
+  font-weight: 700;
+  color: var(--accent, #a93a2b);
+  text-decoration: none;
+}
+
+.dict-kanji-vocab-word:hover {
+  text-decoration: underline;
+}
+
+.dict-kanji-vocab-reading {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  margin-top: 4px;
+  font-size: 13px;
+}
+
+.dict-vocab-kana {
+  font-weight: 600;
+  color: var(--text-main);
+}
+
+.dict-vocab-romaji {
+  color: var(--text-muted);
+}
+
+.dict-kanji-vocab-meaning {
+  margin: 6px 0 0;
+  font-size: 14px;
+  color: var(--text-muted);
+  line-height: 1.4;
 }
 
 .dictionary-stroke-box {
@@ -1084,14 +1213,89 @@
   line-height: 1.45;
 }
 
+/* Kanji Compound Bar (When searching multi-kanji word like 着物) */
+.dictionary-kanji-compound-bar {
+  margin-bottom: 20px;
+  padding: 14px 18px;
+  background: var(--surface-inset, #faf7f2);
+  border: 1px solid var(--stroke);
+  border-radius: var(--radius-control);
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex-wrap: wrap;
+}
+
+.dictionary-compound-label {
+  font-size: 14px;
+  color: var(--text-muted);
+}
+
+.dictionary-compound-label strong {
+  color: var(--text-main);
+}
+
+.dictionary-compound-pills {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.dictionary-compound-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 14px !important;
+  border-radius: 999px !important;
+  border: 1px solid var(--stroke) !important;
+  background: var(--panel-bg, #ffffff) !important;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  min-height: 36px !important;
+  height: 36px !important;
+  font: inherit;
+  color: var(--text-main) !important;
+}
+
+.dictionary-compound-pill:hover {
+  border-color: var(--accent) !important;
+  color: var(--accent) !important;
+}
+
+.dictionary-compound-pill.is-active {
+  background: var(--accent) !important;
+  border-color: var(--accent) !important;
+  color: #ffffff !important;
+  box-shadow: 0 2px 8px rgba(169, 58, 43, 0.25);
+}
+
+.compound-pill-kanji {
+  font-weight: 700;
+  font-size: 17px;
+  line-height: 1;
+}
+
+.compound-pill-hanviet {
+  font-size: 12px;
+  opacity: 0.85;
+}
+
 .dictionary-kanji-result-item {
   display: grid;
   grid-template-columns: auto minmax(0, 1fr);
   gap: 12px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  border-left: 3px solid transparent;
+}
+
+.dictionary-kanji-result-item:hover {
+  background: var(--surface-inset);
 }
 
 .dictionary-kanji-result-item.is-active {
   background: var(--surface-inset);
+  border-left-color: var(--accent);
 }
 
 .dictionary-kanji-result-item strong {

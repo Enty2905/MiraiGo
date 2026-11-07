@@ -15,7 +15,7 @@ function createInitialState() {
   }
 }
 
-export function useDictionarySearch(query, type) {
+export function useDictionarySearch(query, type, searchTrigger = 0) {
   const [state, setState] = useState(createInitialState)
 
   useEffect(() => {
@@ -74,7 +74,7 @@ export function useDictionarySearch(query, type) {
     return () => {
       isMounted = false
     }
-  }, [query, type])
+  }, [query, type, searchTrigger])
 
   if (!(typeof query === 'string' && query.trim())) {
     return {

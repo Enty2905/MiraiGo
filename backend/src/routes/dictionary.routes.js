@@ -2,6 +2,7 @@ const express = require('express');
 const {
   getDictionarySearchHistoryController,
   getKanjiMemoryHintsController,
+  getKanjiStrokesController,
   searchDictionaryController,
 } = require('../controllers/dictionary.controller');
 const { verifyAccessToken } = require('../utils/token');
@@ -36,6 +37,7 @@ function attachOptionalAuthUser(req, res, next) {
 
 dictionaryRouter.get('/history', attachOptionalAuthUser, getDictionarySearchHistoryController);
 dictionaryRouter.get('/kanji-memory-hints', getKanjiMemoryHintsController);
+dictionaryRouter.get('/kanji-strokes/:kanji', getKanjiStrokesController);
 dictionaryRouter.get('/search', attachOptionalAuthUser, searchDictionaryController);
 
 module.exports = {

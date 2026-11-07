@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Navigate, Link, useSearchParams } from 'react-router-dom'
 import { DashboardNav } from '../../components/dashboard/dashboard-nav'
+import { KanjiStrokeAnimator } from '../../components/dictionary/kanji-stroke-animator'
 import { QuickSaveModal, BookmarkIcon } from '../../components/flashcards/quick-save-modal'
 import { useDictionarySearch } from '../../hooks/use-dictionary-search'
 import {
@@ -137,6 +138,8 @@ function formatWordType(type) {
     particle: 'Trợ từ',
     pronoun: 'Đại từ',
     counter: 'Lượng từ',
+    suffix: 'Hậu tố / Tiếp vĩ ngữ',
+    conjunction: 'Liên từ',
   }
   return map[lower] || type
 }
@@ -584,7 +587,8 @@ function VocabularyResult({ vocabulary, relatedKanji, query, onQuickSaveWord }) 
 }
 
 function KanjiResult({ kanji, query }) {
-  const primaryKanji = kanji[0]
+  const [selectedKanjiId, setSelectedKanjiId] = useState(null)
+  const primaryKanji = (selectedKanjiId && kanji.find((k) => k.id === selectedKanjiId)) || kanji[0]
 
   if (!primaryKanji) {
     return <NoResult query={query} label="kanji" />
@@ -593,14 +597,52 @@ function KanjiResult({ kanji, query }) {
   return (
     <div className="dictionary-result-grid">
       <section className="dictionary-panel dictionary-entry-panel">
-
+        {kanji.length > 1 && (
+          <div className="dictionary-kanji-compound-bar">
+            <span className="dictionary-compound-label">
+              Các chữ Hán trong <strong>{query}</strong> ({kanji.length} chữ):
+            </span>
+            <div className="dictionary-compound-pills">
+              {kanji.map((item) => (
+                <button
+                  key={item.id}
+                  type="button"
+                  className={`dictionary-compound-pill${item.id === primaryKanji.id ? ' is-active' : ''}`}
+                  onClick={() => setSelectedKanjiId(item.id)}
+                >
+                  <span className="compound-pill-kanji">{item.kanji}</span>
+                  <span className="compound-pill-hanviet">{item.hanViet || item.meaningVi}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
 
         <header className="dictionary-kanji-header">
-          <div>
-            <h2 lang="ja">{primaryKanji.kanji}</h2>
-            <p>「{primaryKanji.hanViet || primaryKanji.meaningVi}」</p>
+          <div className="dictionary-kanji-header-main">
+            <h2 lang="ja" className="dictionary-kanji-title">{primaryKanji.kanji}</h2>
+            <p className="dictionary-kanji-hanviet">「{primaryKanji.hanViet || primaryKanji.meaningVi}」</p>
+            <div className="dictionary-kanji-subtags">
+              {primaryKanji.jlptLevel && (
+                <span className={`dictionary-badge dictionary-badge--jlpt jlpt-${primaryKanji.jlptLevel.toLowerCase()}`}>
+                  JLPT {primaryKanji.jlptLevel}
+                </span>
+              )}
+              {primaryKanji.strokeCount && (
+                <span className="dictionary-badge dictionary-badge--type">
+                  {primaryKanji.strokeCount} nét
+                </span>
+              )}
+              {primaryKanji.radical && (
+                <span className="dictionary-badge dictionary-badge--tag">
+                  Bộ: {primaryKanji.radical}
+                </span>
+              )}
+            </div>
           </div>
-          <KanjiStrokeBox kanji={primaryKanji} />
+          <div className="dictionary-kanji-header-animator">
+            <KanjiStrokeAnimator kanji={primaryKanji.kanji} />
+          </div>
         </header>
 
         <section className="dictionary-kanji-info">
@@ -616,8 +658,8 @@ function KanjiResult({ kanji, query }) {
         </section>
 
         <section className="dictionary-kanji-breakdown">
-          <h2>Bộ</h2>
-          <p>{primaryKanji.radical || 'Chưa có dữ liệu bộ thủ.'}</p>
+          <h2>Bộ thủ</h2>
+          <p>{primaryKanji.radical ? `Bộ: ${primaryKanji.radical}` : 'Chưa có dữ liệu bộ thủ.'}</p>
         </section>
 
         <section className="dictionary-kanji-meaning">
@@ -627,7 +669,7 @@ function KanjiResult({ kanji, query }) {
 
         {primaryKanji.examples.length > 0 ? (
           <section className="dictionary-kanji-examples">
-            <h2>Ví dụ</h2>
+            <h2>Ví dụ câu</h2>
             {primaryKanji.examples.slice(0, 4).map((example) => (
               <article key={example.id}>
                 <strong>{example.exampleJp}</strong>
@@ -639,9 +681,45 @@ function KanjiResult({ kanji, query }) {
         ) : null}
 
         <section className="dictionary-kanji-mnemonic">
-          <h2>Cách nhớ</h2>
-          <p>{primaryKanji.mnemonic || 'Chưa có mẹo ghi nhớ cho kanji này.'}</p>
+          <div className="dictionary-section-heading">
+            <LightbulbIcon className="dictionary-section-heading-icon" />
+            <h3>Mẹo ghi nhớ chiết tự</h3>
+          </div>
+          <p className="dictionary-mnemonic-text">{primaryKanji.mnemonic || 'Chưa có mẹo ghi nhớ cho kanji này.'}</p>
         </section>
+
+        {primaryKanji.relatedVocabulary && primaryKanji.relatedVocabulary.length > 0 && (
+          <section className="dictionary-kanji-vocab-compounds">
+            <div className="dictionary-section-heading">
+              <BookOpenIcon className="dictionary-section-heading-icon" />
+              <h3>Từ vựng thực tế chứa chữ 「{primaryKanji.kanji}」</h3>
+            </div>
+            <div className="dict-kanji-vocab-grid">
+              {primaryKanji.relatedVocabulary.map((wordItem) => (
+                <article key={wordItem.id} className="dict-kanji-vocab-card">
+                  <div className="dict-kanji-vocab-top">
+                    <Link
+                      to={`/dictionary?q=${encodeURIComponent(wordItem.word)}&type=vocabulary`}
+                      className="dict-kanji-vocab-word"
+                    >
+                      {wordItem.word}
+                    </Link>
+                    {wordItem.jlptLevel && (
+                      <span className={`dictionary-badge dictionary-badge--jlpt jlpt-${wordItem.jlptLevel.toLowerCase()}`}>
+                        {wordItem.jlptLevel}
+                      </span>
+                    )}
+                  </div>
+                  <div className="dict-kanji-vocab-reading">
+                    {wordItem.kana && <span className="dict-vocab-kana">「{wordItem.kana}」</span>}
+                    {wordItem.romaji && <span className="dict-vocab-romaji">[{wordItem.romaji}]</span>}
+                  </div>
+                  <p className="dict-kanji-vocab-meaning">{wordItem.meaningVi}</p>
+                </article>
+              ))}
+            </div>
+          </section>
+        )}
       </section>
 
       <aside className="dictionary-side-column">
@@ -654,8 +732,16 @@ function KanjiResult({ kanji, query }) {
             <article
               key={item.id}
               className={`dictionary-kanji-result-item${item.id === primaryKanji.id ? ' is-active' : ''}`}
+              onClick={() => setSelectedKanjiId(item.id)}
+              role="button"
+              tabIndex={0}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  setSelectedKanjiId(item.id)
+                }
+              }}
             >
-              <Link to={`/dictionary?q=${encodeURIComponent(item.kanji)}&type=kanji`}>{item.kanji}</Link>
+              <span className="dict-kanji-item-char">{item.kanji}</span>
               <div>
                 <strong>{item.hanViet || item.meaningVi}</strong>
                 <p>{getDisplayMeaning(item)}</p>
@@ -696,15 +782,21 @@ function StatBlock({ label, value }) {
 
 function KanjiMiniCard({ kanji }) {
   return (
-    <article className="dictionary-kanji-mini-card">
-      <div className="dictionary-kanji-mini-head">
-        <span>{kanji.kanji}</span>
-        <strong>「{kanji.onyomi || kanji.kunyomi || kanji.hanViet}」</strong>
-      </div>
-      <p>{kanji.hanViet || getDisplayMeaning(kanji)}</p>
-      <KanjiStrokeBox kanji={kanji} compact />
-      <small>Hán tự: {kanji.kanji} - {kanji.hanViet || getDisplayMeaning(kanji)}</small>
-    </article>
+    <Link
+      to={`/dictionary?q=${encodeURIComponent(kanji.kanji)}&type=kanji`}
+      className="dictionary-kanji-mini-card-link"
+      title={`Xem chi tiết chữ Hán ${kanji.kanji}`}
+    >
+      <article className="dictionary-kanji-mini-card">
+        <div className="dictionary-kanji-mini-head">
+          <span>{kanji.kanji}</span>
+          <strong>「{kanji.onyomi || kanji.kunyomi || kanji.hanViet}」</strong>
+        </div>
+        <p>{kanji.hanViet || getDisplayMeaning(kanji)}</p>
+        <KanjiStrokeBox kanji={kanji} compact />
+        <small>Hán tự: {kanji.kanji} - {kanji.hanViet || getDisplayMeaning(kanji)}</small>
+      </article>
+    </Link>
   )
 }
 
@@ -738,7 +830,8 @@ export function DictionaryPage({ redirectToDictionary = false }) {
   const [accountHistory, setAccountHistory] = useState([])
   const [memoryHints, setMemoryHints] = useState([])
   const [quickSaveWord, setQuickSaveWord] = useState(null)
-  const { result, isLoading, errorMessage } = useDictionarySearch(queryParam, activeType)
+  const [searchTrigger, setSearchTrigger] = useState(0)
+  const { result, isLoading, errorMessage } = useDictionarySearch(queryParam, activeType, searchTrigger)
 
   useEffect(() => {
     let isMounted = true
@@ -807,10 +900,12 @@ export function DictionaryPage({ redirectToDictionary = false }) {
       setGuestHistory(writeGuestHistory(normalizedInput, activeType))
     }
 
+    setSearchTrigger((prev) => prev + 1)
     setSearchParams(normalizedInput ? { q: normalizedInput, type: activeType } : { type: activeType })
   }
 
   const handleTabChange = (nextType) => {
+    setSearchTrigger((prev) => prev + 1)
     setSearchParams(queryParam ? { q: queryParam, type: nextType } : { type: nextType })
   }
 
@@ -819,6 +914,7 @@ export function DictionaryPage({ redirectToDictionary = false }) {
     const nextType = typeof keyword === 'string' ? activeType : keyword.type
 
     setGuestHistory(writeGuestHistory(nextQuery, nextType))
+    setSearchTrigger((prev) => prev + 1)
     setSearchParams({ q: nextQuery, type: nextType })
   }
 
@@ -861,7 +957,7 @@ export function DictionaryPage({ redirectToDictionary = false }) {
               />
             ) : null}
             {!isLoading && !errorMessage && activeType === 'kanji' && totalResults > 0 ? (
-              <KanjiResult kanji={result.kanji} query={queryParam} />
+              <KanjiResult key={queryParam} kanji={result.kanji} query={queryParam} />
             ) : null}
           </>
         )}

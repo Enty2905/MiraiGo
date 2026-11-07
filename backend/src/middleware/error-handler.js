@@ -10,7 +10,7 @@ function errorHandler(error, req, res, next) {
   }
 
   const status = Number.isInteger(error.status) ? error.status : 500;
-  const message = status >= 500 ? 'Lỗi máy chủ nội bộ.' : error.message;
+  const message = error.message || (status >= 500 ? 'Lỗi máy chủ nội bộ.' : 'Yêu cầu không hợp lệ.');
 
   return res.status(status).json({
     message,

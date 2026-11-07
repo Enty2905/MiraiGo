@@ -50,3 +50,12 @@ export async function fetchKanjiMemoryHints() {
     throw new Error(getErrorMessage(error), { cause: error })
   }
 }
+
+export async function fetchKanjiStrokes(kanji) {
+  try {
+    const response = await apiClient.get(`/dictionary/kanji-strokes/${encodeURIComponent(kanji)}`)
+    return response.data || null
+  } catch {
+    return null
+  }
+}

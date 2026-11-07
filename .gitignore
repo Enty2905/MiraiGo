@@ -21,6 +21,8 @@ __pycache__/
 !.env.example
 *.local
 *.log
+*.cache.json
+backend/db/*cache.json
 
 # Secrets and local credentials
 *.key

@@ -9,7 +9,7 @@
     "lint": "node scripts/check-syntax.cjs",
     "test": "node --test test/*.test.js",
     "test:db": "node src/tests/db-connection.test.js",
-    "db:setup": "node db/seed.js"
+    "db:setup": "node db/seed.js && node db/seed-openjlpt.js"
   },
   "keywords": [],
   "author": "",

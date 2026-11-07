@@ -44,7 +44,7 @@ app.use('/api/profile', authenticateToken, profileRouter);
 app.use('/api/progress', authenticateToken, progressRouter);
 app.use('/api/bookmarks', authenticateToken, bookmarkRouter);
 app.use('/api/flashcards', authenticateToken, flashcardRouter);
-app.use('/api/handwriting', authenticateToken, handwritingRouter);
+app.use('/api/handwriting', handwritingRouter);
 
 app.use(notFoundHandler);
 app.use(errorHandler);

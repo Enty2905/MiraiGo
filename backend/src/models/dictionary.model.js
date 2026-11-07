@@ -234,6 +234,38 @@ async function findDictionarySearchHistory(userId, limit) {
   return rows;
 }
 
+async function findVocabularyContainingKanji(kanjiChar, limit = 6) {
+  if (!kanjiChar) {
+    return [];
+  }
+
+  const pattern = `%${kanjiChar}%`;
+  const query = `
+    SELECT
+      id,
+      word,
+      kana,
+      romaji,
+      meaning_vi AS "meaningVi",
+      meaning_en AS "meaningEn",
+      word_type AS "wordType",
+      jlpt_level AS "jlptLevel"
+    FROM vocabulary
+    WHERE word LIKE $1
+    ORDER BY
+      CASE
+        WHEN word = $2 THEN 0
+        WHEN word LIKE $3 THEN 1
+        ELSE 2
+      END,
+      id ASC
+    LIMIT $4
+  `;
+
+  const { rows } = await pool.query(query, [pattern, kanjiChar, `${kanjiChar}%`, limit]);
+  return rows;
+}
+
 module.exports = {
   createDictionarySearchHistory,
   findDictionarySearchHistory,
@@ -241,6 +273,7 @@ module.exports = {
   findKanjiExamples,
   findKanjiMatches,
   findRandomKanjiMemoryHints,
+  findVocabularyContainingKanji,
   findVocabularyExamples,
   findVocabularyMatches,
 };

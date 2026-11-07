@@ -1,0 +1,193 @@
+/* Kanji Stroke Order Animator - Calligraphy Flow */
+.kanji-animator-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  background: var(--panel-bg, #ffffff);
+  border: 1px solid var(--stroke, #e6ded3);
+  border-radius: var(--radius-panel, 14px);
+  padding: 14px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.04);
+  width: 100%;
+  max-width: 250px;
+  cursor: pointer;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.kanji-animator-card:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.07);
+}
+
+.kanji-animator-canvas-wrap {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 1;
+  background: #fdfbf7;
+  border-radius: 10px;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: inset 0 0 12px rgba(0, 0, 0, 0.03);
+}
+
+.kanji-stroke-svg {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+/* Calligraphy Grid */
+.stroke-grid-border {
+  fill: none;
+  stroke: #e6dfd5;
+  stroke-width: 1.2;
+}
+
+.stroke-grid-line {
+  stroke: #ece6dc;
+  stroke-width: 0.8;
+  stroke-dasharray: 2.5 2.5;
+}
+
+.stroke-grid-line--diagonal {
+  stroke: #f1ebd7;
+}
+
+.kanji-stroke-fallback {
+  font-size: 68px;
+  font-family: "Noto Serif JP", serif;
+  fill: var(--text-main, #24292e);
+  font-weight: 600;
+}
+
+/* Layer 1: Faint Ghost Outline */
+.kanji-path-ghost {
+  fill: none;
+  stroke: #ded7cb;
+  stroke-width: 4;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  opacity: 0.6;
+}
+
+/* Layer 2: Completed Solid Strokes */
+.kanji-path-solid {
+  fill: none;
+  stroke: #1f2937;
+  stroke-width: 4;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  transition: stroke 0.2s ease;
+}
+
+/* Layer 3: Actively Gliding Red Calligraphy Stroke */
+.kanji-path-animating-red {
+  fill: none;
+  stroke: #c53030;
+  stroke-width: 4.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  filter: drop-shadow(0 1px 2px rgba(197, 48, 48, 0.35));
+}
+
+.kanji-path-animating-red.is-gliding {
+  animation-name: kanjiGlideFlow;
+  animation-timing-function: cubic-bezier(0.35, 0, 0.25, 1);
+  animation-fill-mode: forwards;
+}
+
+@keyframes kanjiGlideFlow {
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+/* Layer 4: Number Badge (Only for active stroke) */
+.kanji-stroke-num-group {
+  animation: kanjiNumPop 0.2s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+}
+
+@keyframes kanjiNumPop {
+  0% {
+    opacity: 0;
+    transform: scale(0.3);
+    transform-origin: center;
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+    transform-origin: center;
+  }
+}
+
+.kanji-stroke-num-circle {
+  fill: #c53030;
+  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.25));
+}
+
+.kanji-stroke-num-text {
+  fill: #ffffff;
+  font-size: 4.2px;
+  font-weight: 800;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  user-select: none;
+}
+
+/* Loading Overlay */
+.kanji-animator-loading-overlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(253, 251, 247, 0.85);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+  color: var(--text-muted, #64748b);
+  backdrop-filter: blur(2px);
+}
+
+/* Compact version for mini cards */
+.kanji-stroke-box--compact {
+  width: 100%;
+  max-width: 180px;
+  aspect-ratio: 1;
+  background: #fdfbf7;
+  border-radius: 8px;
+  border: 1px solid var(--stroke, #e6ded3);
+  overflow: hidden;
+  margin: 12px auto 0;
+}
+
+/* Footer Counter */
+.kanji-animator-footer {
+  width: 100%;
+  margin-top: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 4px 4px 0;
+  border-top: 1px solid #f1ece4;
+}
+
+.kanji-stroke-counter {
+  font-size: 13px;
+  color: var(--text-muted, #64748b);
+}
+
+.kanji-stroke-counter strong {
+  color: #c53030;
+  font-weight: 700;
+}
+
+.kanji-stroke-done {
+  color: #15803d;
+  font-weight: 600;
+}
+
+.kanji-animator-hint {
+  font-size: 11px;
+  color: var(--text-muted, #94a3b8);
+  font-style: italic;
+}
