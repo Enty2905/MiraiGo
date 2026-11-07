@@ -3,6 +3,10 @@ const {
   findLessonsByLevel,
   findVocabularyByLesson,
 } = require('../models/vocabulary.model');
+const {
+  findKanjiByCharacters,
+  findVocabularyContainingKanji,
+} = require('../models/dictionary.model');
 const { createHttpError } = require('../utils/http-error');
 
 const SUPPORTED_LEVELS = new Set(['n1', 'n2', 'n3', 'n4', 'n5']);
@@ -132,6 +136,12 @@ async function getLessonsByLevel(levelInput) {
   return levelRows.map((row) => buildLessonSummary(level, row));
 }
 
+function extractKanjiCharacters(text) {
+  return Array.from(text || '').filter((character, index, characters) => {
+    return /[\u3400-\u9fff]/u.test(character) && characters.indexOf(character) === index;
+  });
+}
+
 async function getLessonByLevelAndNumber(levelInput, lessonNumberInput) {
   const level = normalizeLevel(levelInput);
   const lessonNumber = normalizeLessonNumber(lessonNumberInput);
@@ -147,6 +157,52 @@ async function getLessonByLevelAndNumber(levelInput, lessonNumberInput) {
   const vocabulary = vocabularyRows.map(mapVocabularyRowToItem);
   const grammar = mapGrammarRowsToItems(grammarRows);
 
+  const kanjiChars = extractKanjiCharacters(
+    vocabulary.map((item) => item.japanese).join(''),
+  );
+  let kanjiList = [];
+  if (kanjiChars.length > 0) {
+    try {
+      const kanjiRows = await findKanjiByCharacters(kanjiChars);
+      kanjiList = await Promise.all(
+        kanjiRows.map(async (row) => {
+          let relatedVocab = [];
+          try {
+            const rawVocab = await findVocabularyContainingKanji(row.kanji, 4);
+            relatedVocab = rawVocab.map((v) => ({
+              id: v.id,
+              japanese: v.word,
+              kana: v.kana || '',
+              romaji: v.romaji || '',
+              meaningVi: v.meaningVi || v.meaningEn || '',
+              jlptLevel: v.jlptLevel || '',
+            }));
+          } catch {
+            relatedVocab = [];
+          }
+
+          return {
+            id: row.id,
+            kanji: row.kanji,
+            character: row.kanji,
+            hanViet: row.hanViet || '',
+            onyomi: row.onyomi || '',
+            kunyomi: row.kunyomi || '',
+            meaningVi: row.meaningVi || row.meaningEn || '',
+            meaningEn: row.meaningEn || '',
+            strokeCount: row.strokeCount || null,
+            radical: row.radical || '',
+            jlptLevel: row.jlptLevel || '',
+            mnemonic: row.mnemonic || '',
+            relatedVocabulary: relatedVocab,
+          };
+        }),
+      );
+    } catch {
+      kanjiList = [];
+    }
+  }
+
   return {
     id: createLessonId(level, lessonNumber),
     lessonNumber,
@@ -160,8 +216,8 @@ async function getLessonByLevelAndNumber(levelInput, lessonNumberInput) {
     grammar,
     grammarCount: grammar.length,
     grammarSummary: grammar.slice(0, 8).map((item) => `${item.pattern} - ${item.meaningVi}`),
-    // Temporary fallback until kanji have lesson mapping.
-    kanji: vocabulary.slice(0, 8).map((item) => item.japanese),
+    kanji: kanjiList.length > 0 ? kanjiList.map((k) => k.kanji) : vocabulary.slice(0, 8).map((item) => item.japanese),
+    kanjiList,
     content: buildLessonContent(lessonNumber, vocabulary, grammar),
   };
 }

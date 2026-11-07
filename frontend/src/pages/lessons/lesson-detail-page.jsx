@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react'
-import { Link, Navigate, useParams } from 'react-router-dom'
+import { Link, Navigate, useParams, useSearchParams } from 'react-router-dom'
 import { CheckIcon, VolumeIcon } from '../../components/hiragana/hiragana-icons'
 import { QuickSaveModal, BookmarkIcon } from '../../components/flashcards/quick-save-modal'
 import { DashboardNav } from '../../components/dashboard/dashboard-nav'
@@ -8,6 +8,8 @@ import { useLessonsProgress } from '../../hooks/use-lessons-progress'
 import { saveLessonQuiz } from '../../services/progress.service'
 import { normalizeLessonVocabulary } from '../../utils/lesson-vocabulary'
 import { lessonLevelMeta, lessonLevels } from './lesson-levels'
+import { LessonReadingSection } from './lesson-reading-section'
+import { LessonKanjiSection } from './lesson-kanji-section'
 import { NAV_ITEMS } from '../dashboard/dashboard-content'
 import '../dashboard/dashboard-page.css'
 import './lessons-page.css'
@@ -70,10 +72,15 @@ function LessonGrammarSection({ grammar }) {
   }
 
   return (
-    <section className="lesson-detail-card lesson-grammar-card">
+    <section className="lesson-detail-card lesson-grammar-card" id="lesson-grammar-section">
       <div className="lesson-section-head">
-        <h2 className="lesson-section-title">Ngữ pháp</h2>
-        <span>{grammar.length} mẫu</span>
+        <div>
+          <h2 className="lesson-section-title">Cấu trúc Ngữ pháp</h2>
+          <p className="lesson-reading-subtitle">
+            Phân tích cấu trúc câu, ý nghĩa, hoàn cảnh sử dụng và các ví dụ thực tế.
+          </p>
+        </div>
+        <span className="lesson-badge-accent">{grammar.length} mẫu cấu trúc</span>
       </div>
 
       <div className="lesson-grammar-list">
@@ -104,7 +111,7 @@ function LessonGrammarSection({ grammar }) {
 
             {Array.isArray(item.examples) && item.examples.length > 0 ? (
               <div className="lesson-grammar-examples">
-                {item.examples.slice(0, 2).map(renderGrammarExample)}
+                {item.examples.slice(0, 4).map(renderGrammarExample)}
               </div>
             ) : null}
           </article>
@@ -384,7 +391,7 @@ function LessonQuiz({
   const wrongQuestions = quizResult?.questions?.filter((question) => !question.isCorrect) || []
 
   return (
-    <section className="lesson-detail-card lesson-quiz-card">
+    <section className="lesson-detail-card lesson-quiz-card" id="lesson-quiz-section">
       <div className="lesson-quiz-head">
         <div>
           <h2 className="lesson-section-title">Bài kiểm tra nhanh</h2>
@@ -541,6 +548,9 @@ function ArrowLeftIcon(props) {
 
 export function LessonDetailPage() {
   const { level, lessonNumber } = useParams()
+  const [searchParams, setSearchParams] = useSearchParams()
+  const activeSection = searchParams.get('section') || 'all'
+
   const parsedLessonNumber = Number(lessonNumber)
   const normalizedLevel = isValidLessonLevel(level) ? level : DEFAULT_LEVEL
   const normalizedLessonNumber =
@@ -660,6 +670,24 @@ export function LessonDetailPage() {
     }
   }
 
+  const handleTabChange = (sectionKey) => {
+    if (sectionKey === 'all') {
+      searchParams.delete('section')
+      setSearchParams(searchParams)
+    } else {
+      setSearchParams({ section: sectionKey })
+    }
+  }
+
+  const sectionTabs = [
+    { key: 'all', label: 'Tất cả chuyên đề' },
+    { key: 'grammar', label: `Ngữ pháp (${lesson.grammar?.length || 0})` },
+    { key: 'vocabulary', label: `Từ vựng (${normalizedVocabulary.length})` },
+    { key: 'kanji', label: `Hán tự (${lesson.kanjiList?.length || 0})` },
+    { key: 'reading', label: 'Bài đọc hiểu (5 bài)' },
+    { key: 'quiz', label: 'Kiểm tra nhanh' },
+  ]
+
   return (
     <div className="lessons-page">
       <DashboardNav navItems={NAV_ITEMS} />
@@ -668,7 +696,7 @@ export function LessonDetailPage() {
         <div>
           <Link to={`/lessons/${level}`} className="lesson-back-link">
             <ArrowLeftIcon className="lesson-back-icon" />
-            Quay lại bài học
+            Quay lại danh sách bài học
           </Link>
         </div>
 
@@ -695,50 +723,143 @@ export function LessonDetailPage() {
             <span>{normalizedVocabulary.length} từ vựng</span>
             <span>•</span>
             <span>{lesson.grammarCount || lesson.grammar?.length || 0} mẫu ngữ pháp</span>
+            <span>•</span>
+            <span>{lesson.kanjiList?.length || 0} chữ Hán</span>
+            <span>•</span>
+            <span>5 bài đọc hiểu</span>
           </div>
         </section>
 
-        <div className="lesson-detail-layout">
-          <div className="lesson-detail-main-column">
-            <section className="lesson-detail-card">
-              <div className="lesson-content-prose">
-                {renderLessonContent(lessonContent)}
-              </div>
-            </section>
+        {/* Top Module Navigation Tabs */}
+        <nav className="lesson-section-nav-tabs" aria-label="Chuyên đề bài học">
+          {sectionTabs.map((tab) => {
+            const isActive = activeSection === tab.key
 
+            return (
+              <button
+                key={tab.key}
+                type="button"
+                className={`lesson-section-nav-tab${isActive ? ' is-active' : ''}`}
+                onClick={() => handleTabChange(tab.key)}
+              >
+                {tab.label}
+              </button>
+            )
+          })}
+        </nav>
+
+        {/* View mode 1: Only Grammar */}
+        {activeSection === 'grammar' ? (
+          <div className="lesson-single-module-wrap">
             <LessonGrammarSection grammar={lesson.grammar} />
+          </div>
+        ) : null}
 
-            <section className="lesson-detail-card">
-              <h2 className="lesson-section-title">Bài luyện tập</h2>
-
-              <div className="lesson-exercises-list">
-                <article className="lesson-exercise-item">
-                  <p className="lesson-exercise-title">Viết mỗi từ vựng 5 lần</p>
-                  <div className="lesson-word-chips">
-                    {normalizedVocabulary.slice(0, 3).map((word) => (
-                      <span key={`chip-${word.japanese}`} className="lesson-word-chip">
-                        {word.japanese}
-                      </span>
-                    ))}
+        {/* View mode 2: Only Vocabulary */}
+        {activeSection === 'vocabulary' ? (
+          <div className="lesson-detail-layout">
+            <div className="lesson-detail-main-column">
+              <section className="lesson-detail-card">
+                <div className="lesson-section-head">
+                  <div>
+                    <h2 className="lesson-section-title">Danh sách từ vựng bài học</h2>
+                    <p className="lesson-reading-subtitle">
+                      Gồm {normalizedVocabulary.length} từ vựng mới kèm phiên âm Romaji, nghĩa tiếng Việt và âm thanh chuẩn.
+                    </p>
                   </div>
-                </article>
+                  <span className="lesson-badge-accent">{normalizedVocabulary.length} từ</span>
+                </div>
 
-                <article className="lesson-exercise-item">
-                  <p className="lesson-exercise-title">Đặt câu với từ vựng mới</p>
-                  <p className="lesson-exercise-note">
-                    Hãy thử đặt ít nhất 3 câu với các từ trong bài học này.
-                  </p>
-                </article>
+                <div className="lesson-vocabulary-grid-full">
+                  {normalizedVocabulary.map((word, index) => (
+                    <article key={`vocab-full-${word.japanese}-${index}`} className="lesson-vocab-full-card">
+                      <div className="lesson-vocab-full-head">
+                        <div>
+                          <strong className="lesson-vocab-full-jp">{word.japanese}</strong>
+                          <div className="lesson-vocab-full-romaji">{word.romaji}</div>
+                        </div>
 
-                <article className="lesson-exercise-item">
-                  <p className="lesson-exercise-title">Nghe và lặp lại</p>
-                  <p className="lesson-exercise-note">
-                    Luyện phát âm bằng cách nghe người bản xứ và lặp lại theo họ.
-                  </p>
-                </article>
-              </div>
-            </section>
+                        <div className="lesson-vocabulary-actions">
+                          <button
+                            type="button"
+                            className="lesson-vocabulary-sound-btn"
+                            onClick={() => playVocabularyWord(word)}
+                            aria-label={`Nghe phát âm ${word.romaji}`}
+                          >
+                            <VolumeIcon className="lesson-vocabulary-sound-icon" />
+                          </button>
 
+                          <button
+                            type="button"
+                            className="lesson-vocabulary-save-btn"
+                            onClick={() => setQuickSaveWord(word)}
+                            aria-label={`Lưu "${word.japanese}" vào flashcard`}
+                            title="Lưu vào Flashcard"
+                          >
+                            <BookmarkIcon className="lesson-vocabulary-save-icon" />
+                          </button>
+                        </div>
+                      </div>
+
+                      <p className="lesson-vocab-full-meaning">{word.meaningVi || word.english}</p>
+                    </article>
+                  ))}
+                </div>
+              </section>
+
+              <section className="lesson-detail-card">
+                <h2 className="lesson-section-title">Bài luyện tập từ vựng</h2>
+                <div className="lesson-exercises-list">
+                  <article className="lesson-exercise-item">
+                    <p className="lesson-exercise-title">Viết mỗi từ vựng 5 lần</p>
+                    <div className="lesson-word-chips">
+                      {normalizedVocabulary.slice(0, 5).map((word) => (
+                        <span key={`chip-${word.japanese}`} className="lesson-word-chip">
+                          {word.japanese}
+                        </span>
+                      ))}
+                    </div>
+                  </article>
+
+                  <article className="lesson-exercise-item">
+                    <p className="lesson-exercise-title">Đặt câu với từ vựng mới</p>
+                    <p className="lesson-exercise-note">
+                      Hãy thử đặt ít nhất 3 câu với các từ trong bài học này.
+                    </p>
+                  </article>
+                </div>
+              </section>
+            </div>
+          </div>
+        ) : null}
+
+        {/* View mode 3: Only Kanji */}
+        {activeSection === 'kanji' ? (
+          <div className="lesson-single-module-wrap">
+            <LessonKanjiSection
+              kanjiList={lesson.kanjiList}
+              lessonNumber={parsedLessonNumber}
+              level={level}
+              vocabulary={normalizedVocabulary}
+            />
+          </div>
+        ) : null}
+
+        {/* View mode 4: Only Reading */}
+        {activeSection === 'reading' ? (
+          <div className="lesson-single-module-wrap">
+            <LessonReadingSection
+              level={level}
+              lessonNumber={parsedLessonNumber}
+              vocabulary={normalizedVocabulary}
+              grammar={lesson.grammar}
+            />
+          </div>
+        ) : null}
+
+        {/* View mode 5: Only Quiz */}
+        {activeSection === 'quiz' ? (
+          <div className="lesson-single-module-wrap">
             <LessonQuiz
               key={lesson.id}
               level={level}
@@ -746,76 +867,141 @@ export function LessonDetailPage() {
               questions={quizQuestions}
               onCompleted={handleMarkComplete}
             />
-
-            {completeErrorMessage ? (
-              <p role="alert" className="lessons-feedback lessons-feedback--error">{completeErrorMessage}</p>
-            ) : null}
-
-            <button
-              type="button"
-              onClick={handleMarkComplete}
-              className={`lesson-mark-btn lessons-hero--${levelMeta.gradientClass}`}
-              disabled={isCompleted || isCompleting}
-            >
-              <CheckIcon className="lesson-mark-icon" />
-              <span>
-                {isCompleted
-                  ? 'Đã hoàn thành'
-                  : isCompleting
-                    ? 'Đang lưu...'
-                    : completeErrorMessage
-                      ? 'Thử lưu hoàn thành lại'
-                      : 'Đánh dấu hoàn thành'}
-              </span>
-            </button>
-
           </div>
+        ) : null}
 
-          <aside className="lesson-vocabulary-sidebar">
-            <section className="lesson-vocabulary-card">
-              <h3>Từ vựng</h3>
+        {/* View mode 6: All Sections combined */}
+        {activeSection === 'all' ? (
+          <div className="lesson-detail-layout">
+            <div className="lesson-detail-main-column">
+              <section className="lesson-detail-card">
+                <div className="lesson-content-prose">
+                  {renderLessonContent(lessonContent)}
+                </div>
+              </section>
 
-              <div className="lesson-vocabulary-list">
-                {normalizedVocabulary.map((word, index) => (
-                  <article
-                    key={`vocab-${word.japanese}-${index}`}
-                    className="lesson-vocabulary-item"
-                  >
-                    <div className="lesson-vocabulary-head">
-                      <div>
-                        <div className="lesson-vocabulary-japanese">{word.japanese}</div>
-                        <div className="lesson-vocabulary-romaji">{word.romaji}</div>
-                      </div>
+              {/* Ngữ pháp */}
+              <LessonGrammarSection grammar={lesson.grammar} />
 
-                      <div className="lesson-vocabulary-actions">
-                        <button
-                          type="button"
-                          className="lesson-vocabulary-sound-btn"
-                          onClick={() => playVocabularyWord(word)}
-                          aria-label={`Nghe phát âm ${word.romaji}`}
-                        >
-                          <VolumeIcon className="lesson-vocabulary-sound-icon" />
-                        </button>
+              {/* Hán tự */}
+              <LessonKanjiSection
+                kanjiList={lesson.kanjiList}
+                lessonNumber={parsedLessonNumber}
+                level={level}
+                vocabulary={normalizedVocabulary}
+              />
 
-                        <button
-                          type="button"
-                          className="lesson-vocabulary-save-btn"
-                          onClick={() => setQuickSaveWord(word)}
-                          aria-label={`Lưu "${word.japanese}" vào flashcard`}
-                          title="Lưu vào Flashcard"
-                        >
-                          <BookmarkIcon className="lesson-vocabulary-save-icon" />
-                        </button>
-                      </div>
+              {/* Bài đọc hiểu */}
+              <LessonReadingSection
+                level={level}
+                lessonNumber={parsedLessonNumber}
+                vocabulary={normalizedVocabulary}
+                grammar={lesson.grammar}
+              />
+
+              {/* Luyện tập */}
+              <section className="lesson-detail-card">
+                <h2 className="lesson-section-title">Bài luyện tập</h2>
+
+                <div className="lesson-exercises-list">
+                  <article className="lesson-exercise-item">
+                    <p className="lesson-exercise-title">Viết mỗi từ vựng 5 lần</p>
+                    <div className="lesson-word-chips">
+                      {normalizedVocabulary.slice(0, 3).map((word) => (
+                        <span key={`chip-${word.japanese}`} className="lesson-word-chip">
+                          {word.japanese}
+                        </span>
+                      ))}
                     </div>
-
-                    <p className="lesson-vocabulary-meaning">{word.english}</p>
                   </article>
-                ))}
-              </div>
-            </section>
-          </aside>
-        </div>
+
+                  <article className="lesson-exercise-item">
+                    <p className="lesson-exercise-title">Đặt câu với từ vựng mới</p>
+                    <p className="lesson-exercise-note">
+                      Hãy thử đặt ít nhất 3 câu với các từ trong bài học này.
+                    </p>
+                  </article>
+                </div>
+              </section>
+
+              {/* Trắc nghiệm tổng hợp */}
+              <LessonQuiz
+                key={lesson.id}
+                level={level}
+                lessonNumber={parsedLessonNumber}
+                questions={quizQuestions}
+                onCompleted={handleMarkComplete}
+              />
+
+              {completeErrorMessage ? (
+                <p role="alert" className="lessons-feedback lessons-feedback--error">{completeErrorMessage}</p>
+              ) : null}
+
+              <button
+                type="button"
+                onClick={handleMarkComplete}
+                className={`lesson-mark-btn lessons-hero--${levelMeta.gradientClass}`}
+                disabled={isCompleted || isCompleting}
+              >
+                <CheckIcon className="lesson-mark-icon" />
+                <span>
+                  {isCompleted
+                    ? 'Đã hoàn thành'
+                    : isCompleting
+                      ? 'Đang lưu...'
+                      : completeErrorMessage
+                        ? 'Thử lưu hoàn thành lại'
+                        : 'Đánh dấu hoàn thành bài học'}
+                </span>
+              </button>
+            </div>
+
+            <aside className="lesson-vocabulary-sidebar">
+              <section className="lesson-vocabulary-card">
+                <h3>Từ vựng</h3>
+
+                <div className="lesson-vocabulary-list">
+                  {normalizedVocabulary.map((word, index) => (
+                    <article
+                      key={`vocab-${word.japanese}-${index}`}
+                      className="lesson-vocabulary-item"
+                    >
+                      <div className="lesson-vocabulary-head">
+                        <div>
+                          <div className="lesson-vocabulary-japanese">{word.japanese}</div>
+                          <div className="lesson-vocabulary-romaji">{word.romaji}</div>
+                        </div>
+
+                        <div className="lesson-vocabulary-actions">
+                          <button
+                            type="button"
+                            className="lesson-vocabulary-sound-btn"
+                            onClick={() => playVocabularyWord(word)}
+                            aria-label={`Nghe phát âm ${word.romaji}`}
+                          >
+                            <VolumeIcon className="lesson-vocabulary-sound-icon" />
+                          </button>
+
+                          <button
+                            type="button"
+                            className="lesson-vocabulary-save-btn"
+                            onClick={() => setQuickSaveWord(word)}
+                            aria-label={`Lưu "${word.japanese}" vào flashcard`}
+                            title="Lưu vào Flashcard"
+                          >
+                            <BookmarkIcon className="lesson-vocabulary-save-icon" />
+                          </button>
+                        </div>
+                      </div>
+
+                      <p className="lesson-vocabulary-meaning">{word.meaningVi || word.english}</p>
+                    </article>
+                  ))}
+                </div>
+              </section>
+            </aside>
+          </div>
+        ) : null}
       </main>
 
       <QuickSaveModal
