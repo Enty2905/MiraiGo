@@ -9,7 +9,7 @@
 :is(.hiragana-content-grid, .katakana-content-grid) { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(280px, 1fr); gap: 40px; align-items: start; }
 .kana-chart-panel { min-width: 0; grid-column: 1; grid-row: 1; }
 .kana-extra { grid-column: 1 / -1; border-top: 1px solid var(--stroke); }
-.kana-extra summary { min-height: 44px; padding: 10px 0; color: var(--text-muted); font-size: 14px; }
+.kana-extra summary { min-height: 44px; padding: 10px 0; color: var(--text-muted); font-size: 14px; cursor: pointer; user-select: none; }
 .kana-extra section:first-of-type { border-top: 0; padding-top: 4px; }
 .kana-chart-heading { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
 .kana-chart-heading h2 { margin: 0 0 16px; font-family: var(--font-head); }

@@ -1,4 +1,8 @@
+import { useState } from 'react'
 import { CheckIcon, LanguagesIcon, VolumeIcon } from './hiragana-icons'
+import { KanaStrokeAnimator } from '../kana/kana-stroke-animator'
+import { KanaWritingTips } from '../kana/kana-writing-tips'
+import { getKanaStrokeData } from '../../data/kana-strokes'
 
 export function HiraganaCharacterDetail({
   selectedCharacter,
@@ -6,6 +10,8 @@ export function HiraganaCharacterDetail({
   onToggleMastered,
   onPlaySound,
 }) {
+  const [replayTrigger, setReplayTrigger] = useState(0)
+
   if (!selectedCharacter) {
     return (
       <aside className="hiragana-card hiragana-detail-card">
@@ -18,12 +24,21 @@ export function HiraganaCharacterDetail({
   }
 
   const isMastered = masteredCharacters.has(selectedCharacter.character)
+  const strokeData = getKanaStrokeData(selectedCharacter.character)
+  const strokeCount = strokeData?.strokeCount || strokeData?.paths?.length || 0
+
+  const handleReplay = () => {
+    setReplayTrigger((prev) => prev + 1)
+  }
 
   return (
     <aside className="hiragana-card hiragana-detail-card">
       <div className="hiragana-detail-body">
         <header className="hiragana-detail-header">
-          <div className="hiragana-detail-character">{selectedCharacter.character}</div>
+          <KanaStrokeAnimator
+            character={selectedCharacter.character}
+            replayTrigger={replayTrigger}
+          />
           <div className="hiragana-detail-romaji">{selectedCharacter.romaji}</div>
         </header>
 
@@ -50,14 +65,19 @@ export function HiraganaCharacterDetail({
           </button>
         </div>
 
-        <details className="kana-extra">
-          <summary>Mẹo luyện viết</summary>
-        <section className="hiragana-writing-tips">
-          <h3>Mẹo luyện viết</h3>
-          <p>
-            Luyện viết chữ này theo đúng thứ tự nét. Viết nhiều lần để tạo phản xạ tay.
-          </p>
-        </section>
+        <details className="kana-extra" defaultOpen>
+          <summary>
+            Mẹo luyện viết
+            {strokeCount > 0 ? (
+              <span className="kana-stroke-summary-badge">{strokeCount} nét</span>
+            ) : null}
+          </summary>
+          <KanaWritingTips
+            character={selectedCharacter.character}
+            romaji={selectedCharacter.romaji}
+            kanaType="hiragana"
+            onReplayAnimation={handleReplay}
+          />
         </details>
       </div>
     </aside>
