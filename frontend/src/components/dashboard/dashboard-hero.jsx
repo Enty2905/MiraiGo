@@ -147,7 +147,7 @@ const N5_HERO_KANJI = [
 ]
 
 const FLIP_INTERVAL_MS = 3000
-const ANIMATION_HALF_MS = 250
+const ANIMATION_HALF_MS = 280
 
 function VolumeIcon(props) {
   return (
@@ -185,59 +185,99 @@ export function DashboardHero() {
   const [flipState, setFlipState] = useState('idle') // 'idle' | 'flip-out' | 'flip-in'
   const isMountedRef = useRef(true)
   const timerRef = useRef(null)
+  const animTimeout1Ref = useRef(null)
+  const animTimeout2Ref = useRef(null)
 
   useEffect(() => {
     isMountedRef.current = true
     return () => {
       isMountedRef.current = false
       if (timerRef.current) clearTimeout(timerRef.current)
+      if (animTimeout1Ref.current) clearTimeout(animTimeout1Ref.current)
+      if (animTimeout2Ref.current) clearTimeout(animTimeout2Ref.current)
     }
   }, [])
 
   const flipTo = useCallback(
     (targetIndex) => {
-      if (flipState !== 'idle' || targetIndex === currentIndex) return
+      if (targetIndex === currentIndex) return
+
+      // Clear any pending animation timeouts before starting a new one
+      if (animTimeout1Ref.current) clearTimeout(animTimeout1Ref.current)
+      if (animTimeout2Ref.current) clearTimeout(animTimeout2Ref.current)
       if (timerRef.current) clearTimeout(timerRef.current)
 
       setFlipState('flip-out')
 
-      setTimeout(() => {
+      animTimeout1Ref.current = setTimeout(() => {
         if (!isMountedRef.current) return
         setCurrentIndex(targetIndex)
         setFlipState('flip-in')
 
-        setTimeout(() => {
+        animTimeout2Ref.current = setTimeout(() => {
           if (!isMountedRef.current) return
           setFlipState('idle')
         }, ANIMATION_HALF_MS)
       }, ANIMATION_HALF_MS)
     },
-    [flipState, currentIndex]
+    [currentIndex]
   )
 
   const flipNext = useCallback(() => {
-    if (flipState !== 'idle') return
     const nextIndex = (currentIndex + 1) % N5_HERO_KANJI.length
     flipTo(nextIndex)
-  }, [currentIndex, flipState, flipTo])
+  }, [currentIndex, flipTo])
 
   const flipPrev = useCallback(() => {
-    if (flipState !== 'idle') return
     const prevIndex = (currentIndex - 1 + N5_HERO_KANJI.length) % N5_HERO_KANJI.length
     flipTo(prevIndex)
-  }, [currentIndex, flipState, flipTo])
+  }, [currentIndex, flipTo])
 
-  // Continuous auto-flip every 3 seconds, looping through all 20 Kanji
+  // Continuous auto-flip every 3 seconds, gracefully handling tab visibility (switching tabs, etc.)
   useEffect(() => {
-    if (flipState !== 'idle') return
+    if (!isMountedRef.current) return
 
-    timerRef.current = setTimeout(() => {
-      if (isMountedRef.current && !document.hidden) {
+    const scheduleTimer = () => {
+      if (timerRef.current) clearTimeout(timerRef.current)
+      if (document.hidden) return
+
+      timerRef.current = setTimeout(() => {
+        if (!isMountedRef.current) return
+        if (document.hidden) return
         flipNext()
+      }, FLIP_INTERVAL_MS)
+    }
+
+    const handleVisibilityChange = () => {
+      if (document.hidden) {
+        // Tab is hidden: pause timer & clear any mid-transition state so it never freezes
+        if (timerRef.current) clearTimeout(timerRef.current)
+        if (animTimeout1Ref.current) clearTimeout(animTimeout1Ref.current)
+        if (animTimeout2Ref.current) clearTimeout(animTimeout2Ref.current)
+        setFlipState('idle')
+      } else {
+        // Tab is visible again: ensure card is idle and immediately resume timer
+        setFlipState('idle')
+        scheduleTimer()
       }
-    }, FLIP_INTERVAL_MS)
+    }
+
+    const handleWindowFocus = () => {
+      if (!document.hidden && flipState === 'idle') {
+        scheduleTimer()
+      }
+    }
+
+    document.addEventListener('visibilitychange', handleVisibilityChange)
+    window.addEventListener('focus', handleWindowFocus)
+
+    if (flipState === 'idle' && !document.hidden) {
+      scheduleTimer()
+    }
 
     return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange)
+      window.removeEventListener('focus', handleWindowFocus)
       if (timerRef.current) clearTimeout(timerRef.current)
     }
   }, [currentIndex, flipState, flipNext])
