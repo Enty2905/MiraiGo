@@ -22,10 +22,13 @@ export async function fetchHandwritingHealth() {
   }
 }
 
-export async function predictHandwriting({ imageDataUrl }) {
+export async function predictHandwriting({ imageDataUrl, strokes, width, height }) {
   try {
     const response = await apiClient.post('/handwriting/predict', {
       imageDataUrl,
+      strokes,
+      width,
+      height,
     })
 
     return response.data
