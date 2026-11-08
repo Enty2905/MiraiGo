@@ -100,6 +100,7 @@ function playAudio(text) {
 }
 
 function percent(value) {
+  if (value === null || value === undefined) return '—'
   const confidence = Number(value)
 
   if (!Number.isFinite(confidence)) {
@@ -119,7 +120,7 @@ function TextResult({ result, onSelectCandidate }) {
   }
 
   const confidenceNum = Math.round(Number(result.average_confidence || 0) * 100)
-  const confidenceTag = confidenceNum >= 85 ? 'Độ chính xác cao' : confidenceNum >= 60 ? 'Tốt' : 'Tham khảo'
+  const confidenceTag = result.average_confidence == null ? 'Không cung cấp' : confidenceNum >= 85 ? 'Độ tin cậy cao' : confidenceNum >= 60 ? 'Tốt' : 'Tham khảo'
 
   return (
     <div className="handwriting-text-result">
@@ -230,7 +231,7 @@ export function HandwritingPage() {
       return 'AI Sẵn sàng'
     }
 
-    return 'AI chưa bật'
+    return health.engine === 'cloud' ? 'Đám mây · chưa kiểm tra' : 'Model chưa sẵn sàng'
   }, [health, isAiReady])
 
   const canvasPoint = (event) => {
@@ -434,7 +435,8 @@ export function HandwritingPage() {
     setResult({
       ...result,
       text: candidate,
-      character_count: candidate.length,
+      character_count: Array.from(candidate).length,
+      average_confidence: candidate === result.text ? result.average_confidence : null,
     })
   }
 

@@ -23,7 +23,15 @@ function parseImageDataUrl(imageDataUrl) {
   }
 
   const mimeType = match[1] === 'image/jpg' ? 'image/jpeg' : match[1];
-  const buffer = Buffer.from(match[2], 'base64');
+  const base64Data = match[2];
+  const maxEncodedLength = Math.ceil(MAX_IMAGE_BYTES / 3) * 4;
+  if (base64Data.length > maxEncodedLength) {
+    throw createHttpError(400, 'Ảnh chữ viết tay quá lớn. Vui lòng dùng ảnh dưới 4MB.');
+  }
+  if (base64Data.length % 4 !== 0 || !/^[A-Za-z0-9+/]+={0,2}$/.test(base64Data)) {
+    throw createHttpError(400, 'Ảnh chữ viết tay không đúng định dạng base64.');
+  }
+  const buffer = Buffer.from(base64Data, 'base64');
 
   if (buffer.length === 0) {
     throw createHttpError(400, 'Ảnh chữ viết tay đang trống.');
@@ -43,7 +51,11 @@ async function parseAiResponse(response) {
   const contentType = response.headers.get('content-type') || '';
 
   if (contentType.includes('application/json')) {
-    return response.json();
+    try {
+      return await response.json();
+    } catch {
+      throw createHttpError(502, 'Dịch vụ nhận diện trả về dữ liệu JSON không hợp lệ.');
+    }
   }
 
   return {
@@ -79,10 +91,43 @@ async function requestHandwritingAi(path, image, queryParams) {
 
   const data = await parseAiResponse(response);
 
+  // The bundled FastAPI service exposes a JSON endpoint; older model servers
+  // expose multipart /predict/text. Fall back only when the endpoint is absent.
+  if (response.status === 404) {
+    const standardResponse = await fetch(new URL('/v1/recognize', getHandwritingAiBaseUrl()), {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ imageData: `data:${image.mimeType};base64,${image.buffer.toString('base64')}` }),
+      signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
+    }).catch(() => {
+      throw createHttpError(503, 'Chưa kết nối được dịch vụ nhận diện ảnh.');
+    });
+    const standardData = await parseAiResponse(standardResponse);
+    if (!standardResponse.ok) {
+      throw createHttpError(
+        standardResponse.status === 503 ? 503 : 502,
+        standardData?.error?.message || 'Dịch vụ nhận diện ảnh chưa sẵn sàng.',
+      );
+    }
+    const candidates = standardData?.candidates;
+    if (!Array.isArray(candidates) || candidates.some(candidate =>
+      !candidate || typeof candidate.character !== 'string' ||
+      !Number.isFinite(candidate.confidence) || candidate.confidence < 0 || candidate.confidence > 1)) {
+      throw createHttpError(502, 'Dịch vụ nhận diện trả về kết quả không hợp lệ.');
+    }
+    const text = candidates[0]?.character || '';
+    return {
+      text,
+      candidates: candidates.map(candidate => candidate.character),
+      character_count: Array.from(text).length,
+      average_confidence: candidates[0]?.confidence ?? null,
+    };
+  }
+
   if (!response.ok) {
     throw createHttpError(
       response.status === 503 ? 503 : 502,
-      data.detail || 'Japanese Handwriting AI không xử lý được ảnh này.',
+      data?.detail || 'Japanese Handwriting AI không xử lý được ảnh này.',
     );
   }
 
@@ -90,6 +135,21 @@ async function requestHandwritingAi(path, image, queryParams) {
 }
 
 async function recognizeStrokesWithGoogle(strokes, width = 420, height = 420) {
+  if (!Number.isFinite(width) || !Number.isFinite(height) ||
+      width <= 0 || height <= 0 || width > 4096 || height > 4096 || strokes.length > 128) {
+    throw createHttpError(400, 'Kích thước bảng hoặc số nét vẽ không hợp lệ.');
+  }
+  let totalPoints = 0;
+  for (const stroke of strokes) {
+    if (!stroke || !['x', 'y', 't'].every(key => Array.isArray(stroke[key])) ||
+        stroke.x.length === 0 || stroke.x.length !== stroke.y.length ||
+        stroke.x.length !== stroke.t.length ||
+        !['x', 'y', 't'].every(key => stroke[key].every(Number.isFinite))) {
+      throw createHttpError(400, 'Dữ liệu nét vẽ không hợp lệ.');
+    }
+    totalPoints += stroke.x.length;
+  }
+  if (totalPoints > 20000) throw createHttpError(400, 'Bản vẽ có quá nhiều điểm.');
   const ink = strokes.map((s) => [
     s.x || [],
     s.y || [],
@@ -130,24 +190,29 @@ async function recognizeStrokesWithGoogle(strokes, width = 420, height = 420) {
     throw createHttpError(502, 'Bộ nhận diện chữ viết không phản hồi thành công.');
   }
 
-  const data = await response.json();
-  if (data[0] !== 'SUCCESS' || !data[1] || !data[1][0] || !data[1][0][1]) {
+  const data = await parseAiResponse(response);
+  const candidates = data?.[1]?.[0]?.[1];
+  if (data?.[0] !== 'SUCCESS' || !Array.isArray(candidates) ||
+      candidates.some(candidate => typeof candidate !== 'string')) {
+    throw createHttpError(502, 'Bộ nhận diện chữ viết trả về kết quả không hợp lệ.');
+  }
+  if (candidates.length === 0) {
     return {
       text: '',
       candidates: [],
       character_count: 0,
-      average_confidence: 0,
+      average_confidence: null,
     };
   }
 
-  const candidates = data[1][0][1];
   const bestMatch = candidates[0] || '';
 
   return {
     text: bestMatch,
     candidates: candidates.slice(0, 10),
-    character_count: bestMatch.length,
-    average_confidence: 0.95,
+    character_count: Array.from(bestMatch).length,
+    // Input Tools returns candidates but does not provide calibrated confidence.
+    average_confidence: null,
   };
 }
 
@@ -160,19 +225,26 @@ async function getHandwritingHealth() {
     });
     const data = await parseAiResponse(response);
 
+    if (response.ok && data.service === 'miraigo-handwriting-ai') {
+      const readiness = await fetch(new URL('/ready', getHandwritingAiBaseUrl()), {
+        signal: AbortSignal.timeout(2000),
+      });
+      const readinessData = await parseAiResponse(readiness);
+      return { ...data, connected: true, engine: 'local', modelLoaded: readiness.ok && readinessData.model?.loaded === true };
+    }
+
     return {
+      ...data,
       connected: response.ok,
       engine: 'local',
-      ...data,
     };
   } catch {
-    // If local AI is not running, Google Cloud Input Tools engine is ready
     return {
-      connected: true,
-      ok: true,
-      modelLoaded: true,
+      connected: false,
+      ok: false,
+      modelLoaded: false,
       engine: 'cloud',
-      message: 'Japanese Handwriting Cloud Engine sẵn sàng.',
+      message: 'AI local chưa kết nối. Nhận diện nét vẽ sẽ thử dịch vụ đám mây khi gửi.',
     };
   }
 }
@@ -182,8 +254,8 @@ async function predictHandwriting(payload) {
   if (payload?.strokes && Array.isArray(payload.strokes) && payload.strokes.length > 0) {
     return recognizeStrokesWithGoogle(
       payload.strokes,
-      Number(payload.width) || 420,
-      Number(payload.height) || 420
+      payload.width === undefined ? 420 : Number(payload.width),
+      payload.height === undefined ? 420 : Number(payload.height)
     );
   }
 
@@ -199,8 +271,8 @@ async function predictHandwriting(payload) {
   } catch (error) {
     if (error.status === 503) {
       throw createHttpError(
-        400,
-        'Vui lòng dùng bút hoặc chuột vẽ trực tiếp lên bảng để nhận diện nét chữ nhanh và chính xác nhất.'
+        503,
+        'Model nhận diện ảnh chưa sẵn sàng. Bạn có thể vẽ trực tiếp lên bảng để nhận diện nét chữ.'
       );
     }
     throw error;
