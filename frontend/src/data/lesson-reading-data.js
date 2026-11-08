@@ -11,18 +11,12 @@
  * kèm 5-6 câu hỏi trắc nghiệm kiểm tra độ hiểu sâu sắc có giải thích tiếng Việt chi tiết.
  */
 
-import { N5_READING_LESSONS } from './readings/n5-readings.js'
-import { N4_READING_LESSONS } from './readings/n4-readings.js'
-import { N3_READING_LESSONS } from './readings/n3-readings.js'
-import { N2_READING_LESSONS } from './readings/n2-readings.js'
-import { N1_READING_LESSONS } from './readings/n1-readings.js'
-
-export const LESSON_READING_DATABASE = {
-  ...N5_READING_LESSONS,
-  ...N4_READING_LESSONS,
-  ...N3_READING_LESSONS,
-  ...N2_READING_LESSONS,
-  ...N1_READING_LESSONS,
+const readingLoaders = {
+  n5: () => import('./readings/n5-readings.js').then(module => module.N5_READING_LESSONS),
+  n4: () => import('./readings/n4-readings.js').then(module => module.N4_READING_LESSONS),
+  n3: () => import('./readings/n3-readings.js').then(module => module.N3_READING_LESSONS),
+  n2: () => import('./readings/n2-readings.js').then(module => module.N2_READING_LESSONS),
+  n1: () => import('./readings/n1-readings.js').then(module => module.N1_READING_LESSONS),
 }
 
 /**
@@ -32,10 +26,6 @@ export const LESSON_READING_DATABASE = {
 export function generateReadingPassages(level, lessonNumber, vocabulary = [], grammar = []) {
   const normLevel = String(level).toUpperCase()
   const lessonKey = `${String(level).toLowerCase()}-l${lessonNumber}`
-
-  if (LESSON_READING_DATABASE[lessonKey]) {
-    return LESSON_READING_DATABASE[lessonKey]
-  }
 
   const safeVocab = Array.isArray(vocabulary) && vocabulary.length > 0
     ? vocabulary
@@ -244,10 +234,13 @@ Rất mong nhận được sự giúp đỡ.`
 /**
  * Lấy danh sách 4-5 bài đọc hiểu cho một bài học cụ thể
  */
-export function getLessonReadingPassages(level, lessonNumber, vocabulary = [], grammar = []) {
-  const lessonKey = `${String(level).toLowerCase()}-l${lessonNumber}`
-  if (LESSON_READING_DATABASE[lessonKey]) {
-    return LESSON_READING_DATABASE[lessonKey]
+export async function getLessonReadingPassages(level, lessonNumber, vocabulary = [], grammar = []) {
+  const normalizedLevel = String(level).toLowerCase()
+  const lessonKey = `${normalizedLevel}-l${lessonNumber}`
+  const loadReadings = readingLoaders[normalizedLevel]
+  if (loadReadings) {
+    const lessons = await loadReadings()
+    if (lessons[lessonKey]) return lessons[lessonKey]
   }
 
   return generateReadingPassages(level, lessonNumber, vocabulary, grammar)

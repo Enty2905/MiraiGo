@@ -1,12 +1,39 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { getLessonReadingPassages } from '../../data/lesson-reading-data'
 
-export function LessonReadingSection({ level, lessonNumber, vocabulary = [], grammar = [] }) {
-  const passages = getLessonReadingPassages(level, lessonNumber, vocabulary, grammar)
+const EMPTY_ITEMS = []
+
+export function LessonReadingSection({ level, lessonNumber, vocabulary = EMPTY_ITEMS, grammar = EMPTY_ITEMS }) {
+  const lessonKey = `${level}-${lessonNumber}`
+  const [reading, setReading] = useState(null)
+  const [attempt, setAttempt] = useState(0)
+  useEffect(() => {
+    let cancelled = false
+    getLessonReadingPassages(level, lessonNumber, vocabulary, grammar)
+      .then(passages => {
+        if (!cancelled) setReading({ key: lessonKey, attempt, passages })
+      })
+      .catch(() => {
+        if (!cancelled) setReading({ key: lessonKey, attempt, error: true })
+      })
+    return () => { cancelled = true }
+  }, [level, lessonNumber, vocabulary, grammar, lessonKey, attempt])
+  const passages = reading?.key === lessonKey && reading.attempt === attempt ? reading.passages : null
   const [activePassageIndex, setActivePassageIndex] = useState(0)
   const [answersByPassage, setAnswersByPassage] = useState({})
   const [submittedByPassage, setSubmittedByPassage] = useState({})
   const [showTranslationByPassage, setShowTranslationByPassage] = useState({})
+
+  if (!passages) {
+    const failed = reading?.key === lessonKey && reading.attempt === attempt && reading.error
+    return (
+      <section className="lesson-detail-card" aria-busy={!failed}>
+        <h2 className="lesson-section-title">Bài đọc hiểu</h2>
+        <p role={failed ? 'alert' : 'status'}>{failed ? 'Không tải được bài đọc. Vui lòng thử lại.' : 'Đang tải bài đọc...'}</p>
+        {failed ? <button type="button" onClick={() => setAttempt(value => value + 1)}>Thử lại</button> : null}
+      </section>
+    )
+  }
 
   if (!passages || passages.length === 0) {
     return (

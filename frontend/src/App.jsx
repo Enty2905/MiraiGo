@@ -1,26 +1,29 @@
+import { lazy, Suspense } from 'react'
 import { Navigate, Route, Routes } from 'react-router-dom'
 import { RequireAdmin } from './components/auth/require-admin'
 import { RequireAuth } from './components/auth/require-auth'
-import { AssistantPage } from './pages/assistant/assistant-page'
-import { AuthPage } from './pages/auth/auth-page'
-import { AdminPage } from './pages/admin/admin-page'
 import { DashboardPage } from './pages/dashboard/dashboard-page'
-import { DictionaryPage } from './pages/dictionary/dictionary-page'
-import { FlashcardsPage } from './pages/flashcards/flashcards-page'
-import { HandwritingPage } from './pages/handwriting/handwriting-page'
-import { HiraganaPage } from './pages/hiragana/hiragana-page'
-import { KatakanaPage } from './pages/katakana/katakana-page'
-import { CulturePage } from './pages/culture/culture-page'
-import { LessonDetailPage } from './pages/lessons/lesson-detail-page'
-import { LessonsPage } from './pages/lessons/lessons-page'
-import { ProfilePage } from './pages/profile/profile-page'
 import { RouteContext } from './components/ui/route-context'
 import './styles/workspaces.css'
+
+const AssistantPage = lazy(() => import('./pages/assistant/assistant-page').then(module => ({ default: module.AssistantPage })))
+const AuthPage = lazy(() => import('./pages/auth/auth-page').then(module => ({ default: module.AuthPage })))
+const AdminPage = lazy(() => import('./pages/admin/admin-page').then(module => ({ default: module.AdminPage })))
+const DictionaryPage = lazy(() => import('./pages/dictionary/dictionary-page').then(module => ({ default: module.DictionaryPage })))
+const FlashcardsPage = lazy(() => import('./pages/flashcards/flashcards-page').then(module => ({ default: module.FlashcardsPage })))
+const HandwritingPage = lazy(() => import('./pages/handwriting/handwriting-page').then(module => ({ default: module.HandwritingPage })))
+const HiraganaPage = lazy(() => import('./pages/hiragana/hiragana-page').then(module => ({ default: module.HiraganaPage })))
+const KatakanaPage = lazy(() => import('./pages/katakana/katakana-page').then(module => ({ default: module.KatakanaPage })))
+const CulturePage = lazy(() => import('./pages/culture/culture-page').then(module => ({ default: module.CulturePage })))
+const LessonDetailPage = lazy(() => import('./pages/lessons/lesson-detail-page').then(module => ({ default: module.LessonDetailPage })))
+const LessonsPage = lazy(() => import('./pages/lessons/lessons-page').then(module => ({ default: module.LessonsPage })))
+const ProfilePage = lazy(() => import('./pages/profile/profile-page').then(module => ({ default: module.ProfilePage })))
 
 function App() {
   return (
     <>
     <RouteContext />
+    <Suspense fallback={<main id="main-content" tabIndex={-1} aria-busy="true"><p role="status">Đang tải trang...</p></main>}>
     <Routes>
       <Route path="/" element={<DashboardPage />} />
       <Route path="/hiragana" element={<HiraganaPage />} />
@@ -104,6 +107,7 @@ function App() {
       />
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
+    </Suspense>
     </>
   )
 }
