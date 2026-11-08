@@ -62,7 +62,9 @@ export function AuthPage({ mode = 'login' }) {
             name: formState.name,
           })
 
-      saveAuthSession(response)
+      if (!saveAuthSession(response)) {
+        throw new Error('Không lưu được phiên đăng nhập. Vui lòng cho phép lưu trữ dữ liệu của trang rồi thử lại.')
+      }
       setSuccessMessage(response.message || 'Xác thực thành công.')
 
       navigate(returnTo, { replace: true })

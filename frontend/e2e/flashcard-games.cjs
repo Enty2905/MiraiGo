@@ -55,14 +55,16 @@ async function main() {
     assert.equal(await page.locator('.game-review li').count(), 2);
     await page.getByRole('button', { name: 'Ôn lại 2 thẻ nhầm', exact: true }).click();
     await finishMatching();
-    assert.match(await page.locator('.game-result').innerText(), /đúng tất cả/);
+    assert.equal(await page.locator('.game-review li').count(), 0);
+    assert.equal(await page.locator('.game-perfect-msg').count(), 1);
     console.log('PASS matching: 13 cards, wrong pair, rounds, retry mistakes.');
 
-    page.once('dialog', dialog => dialog.dismiss());
+    await page.getByRole('button', { name: 'Chơi lại cả bộ', exact: true }).click();
     await mode('Chọn đáp án');
+    await page.getByRole('dialog').getByRole('button', { name: 'Tiếp tục chơi', exact: true }).click();
     assert.equal(await page.locator('#game-title').innerText(), 'Ghép cặp');
-    page.once('dialog', dialog => dialog.accept());
     await mode('Chọn đáp án');
+    await page.getByRole('dialog').getByRole('button', { name: 'Xác nhận đổi', exact: true }).click();
     await page.getByRole('button', { name: 'Bắt đầu chọn đáp án', exact: true }).click();
     for (let index = 0; index < cards.length; index++) {
       const prompt = await page.locator('.game-question h3').innerText();
@@ -73,7 +75,7 @@ async function main() {
       const optionIndex = texts.findIndex(text => index === 0 ? text.slice(1) !== correct : text.slice(1) === correct);
       await options.nth(optionIndex).click();
       assert.equal(await page.locator('.game-options button:enabled').count(), 0);
-      await page.getByRole('button', { name: index === cards.length - 1 ? 'Xem kết quả' : 'Câu tiếp theo', exact: true }).click();
+      await page.getByRole('button', { name: index === cards.length - 1 ? 'Xem kết quả' : 'Vòng tiếp theo', exact: true }).click();
     }
     assert.equal(await page.locator('.game-review li').count(), 1);
     await page.getByRole('button', { name: 'Ôn lại 1 thẻ nhầm', exact: true }).click();
@@ -111,7 +113,6 @@ async function main() {
     await page.getByText('Đã lưu 2 thẻ.', { exact: false }).waitFor();
     assert.equal(reviews, 1);
     await mode('Ghép cặp');
-    page.once('dialog', dialog => dialog.accept());
     await mode('Ôn flashcard');
     await page.getByRole('heading', { name: 'Kết quả ôn luyện' }).waitFor();
     assert.deepEqual(errors, []);
