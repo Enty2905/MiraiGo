@@ -1,7 +1,7 @@
 .lessons-page {
   min-height: 100vh;
   padding: 20px;
-  background: var(--accent);
+  background: var(--page-bg, #fbf9f5);
 }
 
 .lessons-main {
@@ -12,42 +12,36 @@
 }
 
 .lessons-hero {
-  border-radius: 8px;
-  color: var(--on-accent);
-  padding: 24px;
-  box-shadow: none;
+  border-radius: var(--radius-panel, 12px);
+  color: var(--text-main);
+  padding: 24px 28px;
+  background: var(--panel-bg);
+  border: 1px solid var(--stroke);
+  border-left: 5px solid var(--accent);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.02);
 }
 
-.lessons-hero--n5 {
-  background: var(--accent);
-}
-
-.lessons-hero--n4 {
-  background: var(--accent);
-}
-
-.lessons-hero--n3 {
-  background: var(--accent);
-}
-
-.lessons-hero--n2 {
-  background: var(--accent);
-}
-
+.lessons-hero--n5,
+.lessons-hero--n4,
+.lessons-hero--n3,
+.lessons-hero--n2,
 .lessons-hero--n1 {
-  background: var(--accent);
+  background: var(--panel-bg);
 }
 
 .lessons-hero h1 {
   margin: 0;
-  font-size: clamp(30px, 3vw, 44px);
-  line-height: 1.1;
+  font-size: clamp(28px, 3vw, 38px);
+  font-family: var(--font-head);
+  color: var(--text-main);
+  line-height: 1.2;
 }
 
 .lessons-hero p {
   margin: 10px 0 0;
-  font-size: clamp(16px, 1.3vw, 24px);
-  opacity: 0.95;
+  font-size: clamp(15px, 1.2vw, 18px);
+  color: var(--text-muted);
+  opacity: 1;
 }
 
 .lessons-hero-meta {
@@ -55,8 +49,9 @@
   display: flex;
   align-items: center;
   gap: 10px;
-  font-size: 16px;
-  font-weight: 500;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--accent);
 }
 
 .lessons-hero-progress-track {
@@ -70,7 +65,7 @@
 .lessons-hero-progress-fill {
   height: 100%;
   border-radius: 999px;
-  background: var(--panel-bg);
+  background: var(--accent);
 }
 
 .lessons-level-tabs {

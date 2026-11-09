@@ -10,6 +10,7 @@ const {
   findVocabularyMatches,
 } = require('../models/dictionary.model');
 const { createHttpError } = require('../utils/http-error');
+const { lookupAndEnrichVocabulary, lookupAndEnrichKanji } = require('./dictionary-ai.service');
 
 const DEFAULT_LIMIT = 8;
 const HISTORY_LIMIT = 12;
@@ -122,14 +123,35 @@ function mapKanjiMemoryHint(row) {
 }
 
 async function searchVocabulary(query) {
-  const vocabularyRows = await findVocabularyMatches(query, DEFAULT_LIMIT);
+  let vocabularyRows = await findVocabularyMatches(query, DEFAULT_LIMIT);
+
+  // If not found in DB, try on-demand dictionary AI enrichment
+  if (vocabularyRows.length === 0) {
+    const enriched = await lookupAndEnrichVocabulary(query);
+    if (enriched) {
+      vocabularyRows = [enriched];
+    }
+  }
+
   const vocabularyIds = vocabularyRows.map((row) => row.id);
   const exampleRows = await findVocabularyExamples(vocabularyIds);
   const examplesByVocabularyId = groupRowsById(exampleRows, 'vocabularyId');
   const primaryVocabularyWord = vocabularyRows[0]?.word || '';
   const kanjiCharacters = extractKanjiCharacters(primaryVocabularyWord);
   const uniqueKanjiCharacters = [...new Set(kanjiCharacters)];
-  const relatedKanjiRows = await findKanjiByCharacters(uniqueKanjiCharacters);
+  let relatedKanjiRows = await findKanjiByCharacters(uniqueKanjiCharacters);
+
+  // If any constituent Kanji is missing from DB, enrich it on the fly
+  if (uniqueKanjiCharacters.length > 0 && relatedKanjiRows.length < uniqueKanjiCharacters.length) {
+    const existingChars = new Set(relatedKanjiRows.map((r) => r.kanji));
+    const missingChars = uniqueKanjiCharacters.filter((c) => !existingChars.has(c));
+    for (const char of missingChars) {
+      const newKanji = await lookupAndEnrichKanji(char);
+      if (newKanji) {
+        relatedKanjiRows.push(newKanji);
+      }
+    }
+  }
 
   return {
     vocabulary: vocabularyRows.map((row) => mapVocabulary(row, examplesByVocabularyId)),
@@ -167,6 +189,16 @@ async function searchKanji(query) {
       const vocabKanji = extractKanjiCharacters(vocabRows[0].word);
       if (vocabKanji.length > 0) {
         kanjiRows = await findKanjiByCharacters(vocabKanji);
+      }
+    }
+  }
+
+  // 5. Fallback: If still not found in DB, try on-demand Kanji AI enrichment
+  if (kanjiRows.length === 0 && kanjiCharacters.length > 0) {
+    for (const char of kanjiCharacters) {
+      const enriched = await lookupAndEnrichKanji(char);
+      if (enriched) {
+        kanjiRows.push(enriched);
       }
     }
   }

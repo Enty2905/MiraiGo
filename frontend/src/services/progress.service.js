@@ -17,6 +17,9 @@ export async function fetchProgressOverview() {
     const response = await apiClient.get('/progress/overview')
     return response.data?.overview || null
   } catch (error) {
+    if (error?.response?.status === 401) {
+      return null
+    }
     throw new Error(getErrorMessage(error), { cause: error })
   }
 }
@@ -26,6 +29,9 @@ export async function fetchLearningActivity() {
     const response = await apiClient.get('/progress/activity')
     return response.data?.activity || null
   } catch (error) {
+    if (error?.response?.status === 401) {
+      return null
+    }
     throw new Error(getErrorMessage(error), { cause: error })
   }
 }
@@ -37,6 +43,9 @@ export async function fetchCompletedLessons() {
       ? response.data.completedLessons
       : []
   } catch (error) {
+    if (error?.response?.status === 401) {
+      return []
+    }
     throw new Error(getErrorMessage(error), { cause: error })
   }
 }

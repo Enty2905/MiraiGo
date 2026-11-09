@@ -142,11 +142,7 @@ function ArrowRightIcon(props) {
 export function LessonsPage() {
   const { level } = useParams()
   const [expandedLessonId, setExpandedLessonId] = useState(null)
-  const {
-    completedLessons,
-    isProgressLoading,
-    progressErrorMessage,
-  } = useLessonsProgress()
+  const { completedLessons } = useLessonsProgress()
   const normalizedLevel = isValidLessonLevel(level) ? level : DEFAULT_LEVEL
 
   const {
@@ -160,8 +156,8 @@ export function LessonsPage() {
   }
 
   const currentLevelMeta = lessonLevelMeta[level]
-  const isPageLoading = isLoading || isProgressLoading
-  const pageErrorMessage = errorMessage || progressErrorMessage
+  const isPageLoading = isLoading
+  const pageErrorMessage = errorMessage
   const completedInLevel = currentLessons.filter((lesson) =>
     completedLessons.has(lesson.id),
   ).length

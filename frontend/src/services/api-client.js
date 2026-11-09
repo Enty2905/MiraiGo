@@ -1,5 +1,5 @@
 import axios from 'axios'
-import { getAuthSession } from './auth-session.service'
+import { clearAuthSession, getAuthSession } from './auth-session.service'
 
 const DEFAULT_API_BASE_URL = 'http://localhost:5000/api'
 
@@ -19,5 +19,15 @@ apiClient.interceptors.request.use((config) => {
 
   return config
 })
+
+apiClient.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    if (error?.response?.status === 401) {
+      clearAuthSession()
+    }
+    return Promise.reject(error)
+  },
+)
 
 export default apiClient
