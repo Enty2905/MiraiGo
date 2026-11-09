@@ -4,6 +4,7 @@ const { Client } = require('pg');
 require('dotenv').config();
 const { seedCultureDictionary } = require('./seed-culture-dictionary');
 const { seedKanjiCompounds } = require('./seed-kanji-compounds');
+const { seed25LessonsCurriculum } = require('./seed-25-lessons');
 
 const SEED_LESSONS = [
   {
@@ -5406,6 +5407,7 @@ async function main() {
     await seedCultureDictionary(client);
     await seedKanjiCompounds(client);
     await seedVocabularyExamples(client);
+    await seed25LessonsCurriculum(client);
     await client.query('COMMIT');
 
     console.log('[DB SETUP] Schema, lessons, vocabulary, and grammar seed data are ready.');
