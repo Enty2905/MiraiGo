@@ -11,37 +11,213 @@ const {
 const MAX_SEARCH_TERMS = 8;
 const DEFAULT_LEVEL = 'N5';
 const STOP_WORDS = new Set([
+  'a',
+  'ạ',
   'anh',
+  'ai',
+  'bai',
+  'bài',
+  'ban',
+  'bạn',
+  'bi',
+  'bị',
+  'biet',
+  'biết',
+  'biệt',
+  'cac',
+  'các',
+  'cach',
+  'cách',
+  'cai',
+  'cái',
+  'can',
+  'cần',
+  'cau',
+  'câu',
+  'chi',
+  'chỉ',
+  'chị',
   'cho',
+  'chu',
+  'chữ',
+  'chưa',
+  'co',
+  'có',
+  'con',
+  'còn',
   'cua',
   'của',
+  'cung',
+  'cùng',
+  'cũng',
+  'ấu',
+  'cau',
+  'dang',
+  'đang',
+  'day',
+  'đây',
+  'de',
+  'để',
+  'den',
+  'đến',
+  'di',
+  'đi',
+  'dich',
+  'dịch',
+  'do',
+  'đó',
+  'doc',
+  'đọc',
+  'dung',
+  'dùng',
+  'dụng',
+  'duoc',
+  'được',
+  'du',
+  'dụ',
   'em',
-  'giai',
-  'giải',
   'gi',
   'gì',
+  'giai',
+  'giải',
+  'giua',
+  'giữa',
+  'giup',
+  'giúp',
+  'han',
+  'hán',
+  'hay',
+  'hieu',
+  'hiểu',
+  'hoac',
+  'hoặc',
   'hoc',
   'học',
+  'hoi',
+  'hỏi',
+  'jlpt',
+  'kanji',
+  'khac',
+  'khác',
+  'khi',
+  'khong',
+  'không',
+  'kia',
   'la',
   'là',
+  'lam',
+  'làm',
+  'loai',
+  'loại',
+  'luon',
+  'luôn',
+  'ma',
+  'mà',
+  'mau',
+  'mẫu',
   'minh',
   'mình',
+  'moi',
+  'mới',
+  'mot',
+  'một',
+  'muon',
+  'muốn',
+  'nao',
+  'nào',
+  'nay',
+  'này',
+  'nen',
+  'nên',
+  'neu',
+  'nếu',
+  'ngay',
+  'ngữ',
+  'ngu',
   'nghia',
   'nghĩa',
+  'nha',
+  'nhà',
   'nhat',
   'nhật',
+  'nhau',
+  'nhe',
+  'nhé',
+  'nhi',
+  'nhỉ',
+  'nhieu',
+  'nhiều',
+  'nhu',
+  'như',
+  'nhung',
+  'những',
+  'noi',
+  'nói',
+  'o',
+  'ở',
+  'oi',
+  'ơi',
+  'phan',
+  'phân',
+  'phap',
+  'pháp',
+  'phai',
+  'phải',
+  'qua',
+  'quá',
+  'ra',
+  'rat',
+  'rất',
+  'roi',
+  'rồi',
+  'sao',
+  'se',
+  'sẽ',
+  'su',
+  'sử',
+  'sự',
+  'tai',
+  'tại',
   'the',
   'thế',
+  'thi',
+  'thì',
+  'thich',
+  'thích',
   'tieng',
   'tiếng',
+  'tim',
+  'tìm',
   'toi',
   'tôi',
+  'trong',
+  'truc',
+  'trúc',
   'tu',
   'từ',
+  'tự',
   'va',
   'và',
+  'vao',
+  'vào',
+  'vay',
+  'vậy',
+  've',
+  'về',
+  'vi',
+  'vì',
+  'ví',
+  'viet',
+  'viết',
+  'việt',
   'voi',
   'với',
+  'vung',
+  'vựng',
+  'xem',
+  'xin',
+  'y',
+  'ý',
 ]);
 
 function normalizeLevel(levelInput) {
@@ -57,15 +233,59 @@ function normalizeLevel(levelInput) {
 function normalizeTerm(term) {
   return String(term || '')
     .trim()
-    .replace(/[?!.。、「」『』()[\]{}:,;]+$/g, '')
-    .replace(/^[?!.。、「」『』()[\]{}:,;]+/g, '');
+    .replace(/[?!.。、「」『』()[\]{}:,;*'"`]+$/g, '')
+    .replace(/^[?!.。、「」『』()[\]{}:,;*'"`]+/g, '');
+}
+
+function extractKanjiChars(text) {
+  const chars = [];
+  for (const match of String(text || '').matchAll(/[\u3400-\u9fff々]/gu)) {
+    const ch = match[0];
+    if (!chars.includes(ch)) {
+      chars.push(ch);
+    }
+  }
+  return chars;
+}
+
+function extractJapaneseTokens(text) {
+  const tokens = [];
+  for (const match of String(text || '').matchAll(/[\u3040-\u30ff\u3400-\u9fff々ー〜~]+/gu)) {
+    const cleaned = normalizeTerm(match[0]);
+    if (cleaned && !tokens.includes(cleaned)) {
+      tokens.push(cleaned);
+    }
+  }
+  return tokens;
 }
 
 function extractSearchTerms(message) {
-  const rawTerms = [
-    ...String(message || '').matchAll(/[\u3040-\u30ff\u3400-\u9fff々ー]+/gu),
-    ...String(message || '').matchAll(/[\p{L}\p{N}〜~]+/gu),
-  ].map((match) => normalizeTerm(match[0]));
+  const text = String(message || '');
+  const japaneseTokens = extractJapaneseTokens(text);
+
+  // If the user's message contains Japanese script, focus strictly on the Japanese tokens
+  // (and their constituent Kanji) so conversational Vietnamese filler words never pollute results.
+  if (japaneseTokens.length > 0) {
+    const terms = [...japaneseTokens];
+    for (const token of japaneseTokens) {
+      // Also split on common particles if the user pasted a whole Japanese clause
+      const subParts = token
+        .split(/[はがをにでへとからまでよりのやもねよか、。！？]+/u)
+        .map((p) => normalizeTerm(p))
+        .filter((p) => p.length >= 1);
+      for (const part of subParts) {
+        if (!terms.includes(part)) {
+          terms.push(part);
+        }
+      }
+    }
+    return terms.slice(0, MAX_SEARCH_TERMS);
+  }
+
+  // Otherwise, extract meaningful Vietnamese/Romaji content terms after filtering stop words
+  const rawTerms = [...text.matchAll(/[\p{L}\p{N}〜~]+/gu)].map((match) =>
+    normalizeTerm(match[0]),
+  );
   const terms = [];
 
   for (const term of rawTerms) {
@@ -222,47 +442,75 @@ function buildSources({
   lessonContext,
 }) {
   const sources = [];
+  const seenKeys = new Set();
+
+  const pushUnique = (item) => {
+    const key = `${item.type}:${item.label}`;
+    if (!item.label || seenKeys.has(key)) {
+      return;
+    }
+    seenKeys.add(key);
+    sources.push(item);
+  };
 
   if (lessonContext) {
-    sources.push({
+    pushUnique({
       type: 'lesson',
       label: `${lessonContext.level} bài ${lessonContext.lessonNumber}`,
       detail: `${lessonContext.vocabulary.length} từ vựng, ${groupGrammarRows(lessonContext.grammar).length} mẫu ngữ pháp`,
+      level: lessonContext.level,
+      lessonNumber: lessonContext.lessonNumber,
     });
   }
 
   for (const item of vocabulary.slice(0, 5)) {
-    sources.push({
+    const reading = item.kana || item.romaji || '';
+    const meaning = item.meaningVi || item.meaningEn || '';
+    pushUnique({
       type: 'vocabulary',
       label: item.word,
-      detail: item.meaningVi || item.meaningEn || '',
+      reading,
+      level: item.jlptLevel || '',
+      detail: `${reading && reading !== item.word ? `(${reading}) ` : ''}${meaning}`,
     });
   }
 
-  for (const item of groupGrammarRows(grammar).slice(0, 5)) {
-    sources.push({
+  for (const item of kanji.slice(0, 5)) {
+    const hv = item.hanViet ? `[${item.hanViet}] ` : '';
+    const meaning = item.meaningVi || item.meaningEn || '';
+    pushUnique({
+      type: 'kanji',
+      label: item.kanji,
+      level: item.jlptLevel || '',
+      detail: `${hv}${meaning}`.trim(),
+    });
+  }
+
+  for (const item of groupGrammarRows(grammar).slice(0, 4)) {
+    pushUnique({
       type: 'grammar',
       label: item.pattern,
+      level: item.jlptLevel || '',
       detail: item.meaningVi,
     });
   }
 
-  for (const item of kanji.slice(0, 4)) {
-    sources.push({
-      type: 'kanji',
-      label: item.kanji,
-      detail: item.meaningVi || item.meaningEn || '',
-    });
-  }
-
-  return sources.slice(0, 12);
+  return sources.slice(0, 10);
 }
 
 async function buildRagContext({ message, selectedLevel }) {
   const level = normalizeLevel(selectedLevel);
+  const japaneseTokens = extractJapaneseTokens(message);
+  const kanjiChars = extractKanjiChars(message);
   const terms = extractSearchTerms(message);
   const searchPatterns = createSearchPatterns(terms);
   const lessonReference = parseLessonReference(message, level);
+  const isGrammarQuery = /ngữ\s*pháp|cấu\s*trúc|mẫu\s*câu|[〜~]/iu.test(message);
+
+  // If the user wrote Japanese text, only match Kanji that are actually in the message
+  const kanjiSearchPatterns = japaneseTokens.length > 0 ? [] : searchPatterns;
+  // Only search grammar if the user asked about grammar or did not ask about a specific Kanji/vocab word
+  const shouldSearchGrammar = isGrammarQuery || japaneseTokens.length === 0;
 
   const [
     vocabulary,
@@ -271,9 +519,9 @@ async function buildRagContext({ message, selectedLevel }) {
     lessonVocabulary,
     lessonGrammar,
   ] = await Promise.all([
-    findVocabularyContext(searchPatterns, 8),
-    findGrammarContext(searchPatterns, 6),
-    findKanjiContext(searchPatterns, 4),
+    findVocabularyContext(searchPatterns, 8, terms),
+    shouldSearchGrammar ? findGrammarContext(searchPatterns, 5, terms) : Promise.resolve([]),
+    findKanjiContext(kanjiSearchPatterns, 6, kanjiChars),
     lessonReference
       ? findVocabularyByLesson(lessonReference.level, lessonReference.lessonNumber)
       : Promise.resolve([]),
@@ -309,6 +557,92 @@ async function buildRagContext({ message, selectedLevel }) {
   };
 }
 
+async function refineSourcesWithReply({ message, assistantContent, initialSources = [] }) {
+  const combinedText = `${message || ''}\n${assistantContent || ''}`;
+  const userJpTokens = extractJapaneseTokens(message);
+  const replyJpTokens = extractJapaneseTokens(assistantContent);
+  const allJpTokens = [...new Set([...userJpTokens, ...replyJpTokens])].slice(0, 8);
+  const allKanjiChars = extractKanjiChars(combinedText).slice(0, 6);
+
+  if (allJpTokens.length === 0 && allKanjiChars.length === 0) {
+    return initialSources;
+  }
+
+  const exactTerms = allJpTokens.filter((t) => t.length >= 1 && t.length <= 12);
+  const patterns = exactTerms.slice(0, 4).map((t) => `${t}%`);
+
+  const [vocabRows, kanjiRows] = await Promise.all([
+    findVocabularyContext(patterns, 6, exactTerms),
+    findKanjiContext([], 6, allKanjiChars),
+  ]);
+
+  const refined = [];
+  const seen = new Set();
+
+  const addSource = (src) => {
+    const key = `${src.type}:${src.label}`;
+    if (!src.label || seen.has(key)) return;
+    seen.add(key);
+    refined.push(src);
+  };
+
+  // Keep any lesson reference first
+  for (const s of initialSources) {
+    if (s.type === 'lesson') addSource(s);
+  }
+
+  // If the user asked about a specific Japanese word that isn't in DB yet, extract its summary from the AI reply
+  for (const userToken of userJpTokens) {
+    const inDb = vocabRows.some((v) => v.word === userToken || v.kana === userToken);
+    const isSingleKanji = userToken.length === 1 && allKanjiChars.includes(userToken);
+    if (!inDb && !isSingleKanji) {
+      const meaningMatch = String(assistantContent || '').match(
+        /(?:Nghĩa|Ý nghĩa)\s*:\s*([^\n*]+)/i,
+      );
+      const readingMatch = String(assistantContent || '').match(
+        /(?:Cách đọc|Đọc là|Phiên âm)\s*:\s*([^\n*]+)/i,
+      );
+      const reading = readingMatch ? readingMatch[1].trim() : '';
+      const meaning = meaningMatch ? meaningMatch[1].trim() : 'Từ vựng được giải thích trong hội thoại';
+      addSource({
+        type: 'vocabulary',
+        label: userToken,
+        detail: `${reading ? `(${reading}) ` : ''}${meaning}`,
+      });
+    }
+  }
+
+  for (const item of vocabRows) {
+    const reading = item.kana || item.romaji || '';
+    const meaning = item.meaningVi || item.meaningEn || '';
+    addSource({
+      type: 'vocabulary',
+      label: item.word,
+      reading,
+      level: item.jlptLevel || '',
+      detail: `${reading && reading !== item.word ? `(${reading}) ` : ''}${meaning}`,
+    });
+  }
+
+  for (const item of kanjiRows) {
+    const hv = item.hanViet ? `[${item.hanViet}] ` : '';
+    const meaning = item.meaningVi || item.meaningEn || '';
+    addSource({
+      type: 'kanji',
+      label: item.kanji,
+      level: item.jlptLevel || '',
+      detail: `${hv}${meaning}`.trim(),
+    });
+  }
+
+  for (const s of initialSources) {
+    if (s.type === 'grammar') addSource(s);
+  }
+
+  return refined.slice(0, 10);
+}
+
 module.exports = {
   buildRagContext,
+  refineSourcesWithReply,
 };

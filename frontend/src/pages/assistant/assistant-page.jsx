@@ -83,6 +83,17 @@ function AssistantMessage({ message }) {
   )
 }
 
+function formatSourceTypeLabel(type, level) {
+  const map = {
+    vocabulary: 'Từ vựng',
+    kanji: 'Hán tự',
+    grammar: 'Ngữ pháp',
+    lesson: 'Bài học',
+  }
+  const base = map[type] || type
+  return level ? `${base} · ${level}` : base
+}
+
 function AssistantSources({ sources }) {
   if (!Array.isArray(sources) || sources.length === 0) {
     return (
@@ -99,7 +110,7 @@ function AssistantSources({ sources }) {
       <div className="assistant-source-list">
         {sources.map((source) => (
           <article key={`${source.type}-${source.label}`} className="assistant-source-item">
-            <span>{source.type}</span>
+            <span>{formatSourceTypeLabel(source.type, source.level)}</span>
             <strong>{source.label}</strong>
             {source.detail ? <p>{source.detail}</p> : null}
           </article>

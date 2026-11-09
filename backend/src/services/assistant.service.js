@@ -11,7 +11,7 @@ const {
   getGroqModel,
   sanitizeAssistantOutput,
 } = require('./groq.service');
-const { buildRagContext } = require('./rag.service');
+const { buildRagContext, refineSourcesWithReply } = require('./rag.service');
 const { createHttpError } = require('../utils/http-error');
 
 const MAX_MESSAGE_LENGTH = 1200;
@@ -153,6 +153,11 @@ async function sendAssistantMessage(userId, body) {
     }),
   );
   const assistantContent = completion.content || 'Xin lỗi, AI chưa tạo được câu trả lời phù hợp.';
+  const finalSources = await refineSourcesWithReply({
+    message,
+    assistantContent,
+    initialSources: ragContext.sources,
+  });
 
   await createChatMessage({
     sessionId: session.id,
@@ -169,7 +174,7 @@ async function sendAssistantMessage(userId, body) {
     messageText: assistantContent,
     metadata: {
       model: completion.model,
-      sources: ragContext.sources,
+      sources: finalSources,
       usage: completion.usage,
     },
   });
@@ -178,7 +183,7 @@ async function sendAssistantMessage(userId, body) {
     session,
     message: mapMessage(assistantMessage),
     model: completion.model,
-    sources: ragContext.sources,
+    sources: finalSources,
   };
 }
 
@@ -195,10 +200,36 @@ async function getAssistantSessionMessages(userId, sessionIdInput) {
   }
 
   const messages = await findChatMessages(userId, session.id, 50);
+  const mappedMessages = messages.map(mapMessage);
+
+  // Ensure the latest assistant message in history always has context-matched sources
+  const lastAssistantIdx = mappedMessages.findLastIndex((m) => m.sender === 'assistant');
+  if (lastAssistantIdx !== -1) {
+    const lastAssistant = mappedMessages[lastAssistantIdx];
+    const prevUser = mappedMessages
+      .slice(0, lastAssistantIdx)
+      .reverse()
+      .find((m) => m.sender === 'user');
+    if (prevUser) {
+      const refreshedRag = await buildRagContext({
+        message: prevUser.content,
+        selectedLevel: prevUser.metadata?.level || 'N5',
+      });
+      const refreshedSources = await refineSourcesWithReply({
+        message: prevUser.content,
+        assistantContent: lastAssistant.content,
+        initialSources: refreshedRag.sources,
+      });
+      lastAssistant.metadata = {
+        ...(lastAssistant.metadata || {}),
+        sources: refreshedSources,
+      };
+    }
+  }
 
   return {
     session,
-    messages: messages.map(mapMessage),
+    messages: mappedMessages,
   };
 }
 
@@ -238,6 +269,11 @@ async function* streamAssistantMessage(userId, body) {
   }
 
   const cleanContent = sanitizeAssistantOutput(fullAssistantText) || 'Xin lỗi, AI chưa tạo được câu trả lời phù hợp.';
+  const finalSources = await refineSourcesWithReply({
+    message,
+    assistantContent: cleanContent,
+    initialSources: ragContext.sources,
+  });
 
   await createChatMessage({
     sessionId: session.id,
@@ -255,7 +291,7 @@ async function* streamAssistantMessage(userId, body) {
     messageText: cleanContent,
     metadata: {
       model: getGroqModel(),
-      sources: ragContext.sources,
+      sources: finalSources,
     },
   });
 
@@ -263,7 +299,7 @@ async function* streamAssistantMessage(userId, body) {
     type: 'done',
     message: mapMessage(assistantMessage),
     session,
-    sources: ragContext.sources,
+    sources: finalSources,
     model: getGroqModel(),
   };
 }

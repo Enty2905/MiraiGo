@@ -171,13 +171,20 @@ async function findChatMessages(userId, sessionId, limit) {
   return rows.reverse();
 }
 
-async function findVocabularyContext(searchPatterns, limit) {
-  if (searchPatterns.length === 0) {
+async function findVocabularyContext(searchPatterns, limit, exactTerms = []) {
+  const cleanPatterns = Array.isArray(searchPatterns) ? searchPatterns.filter(Boolean) : [];
+  const cleanExact = Array.isArray(exactTerms)
+    ? exactTerms.map((t) => String(t || '').trim()).filter(Boolean)
+    : [];
+
+  if (cleanPatterns.length === 0 && cleanExact.length === 0) {
     return [];
   }
 
+  const prefixPatterns = cleanExact.map((t) => `${t}%`);
+
   const query = `
-    SELECT DISTINCT
+    SELECT
       id,
       word,
       kana,
@@ -186,32 +193,58 @@ async function findVocabularyContext(searchPatterns, limit) {
       meaning_en AS "meaningEn",
       word_type AS "wordType",
       jlpt_level AS "jlptLevel",
-      lesson_number AS "lessonNumber"
+      lesson_number AS "lessonNumber",
+      CASE
+        WHEN cardinality($3::text[]) > 0 AND (word = ANY($3::text[]) OR kana = ANY($3::text[]) OR LOWER(romaji) = ANY($3::text[])) THEN 0
+        WHEN cardinality($4::text[]) > 0 AND (word ILIKE ANY($4::text[]) OR kana ILIKE ANY($4::text[])) THEN 1
+        WHEN cardinality($1::text[]) > 0 AND (word ILIKE ANY($1::text[]) OR kana ILIKE ANY($1::text[])) THEN 2
+        ELSE 3
+      END AS match_rank
     FROM vocabulary
-    WHERE EXISTS (
-      SELECT 1
-      FROM unnest($1::text[]) AS pattern(value)
-      WHERE word ILIKE pattern.value
-        OR kana ILIKE pattern.value
-        OR romaji ILIKE pattern.value
-        OR meaning_vi ILIKE pattern.value
-        OR meaning_en ILIKE pattern.value
+    WHERE (
+      cardinality($3::text[]) > 0
+      AND (word = ANY($3::text[]) OR kana = ANY($3::text[]) OR LOWER(romaji) = ANY($3::text[]))
     )
-    ORDER BY "jlptLevel" DESC NULLS LAST, "lessonNumber" ASC NULLS LAST, id ASC
+    OR (
+      cardinality($1::text[]) > 0
+      AND EXISTS (
+        SELECT 1
+        FROM unnest($1::text[]) AS pattern(value)
+        WHERE word ILIKE pattern.value
+          OR kana ILIKE pattern.value
+          OR romaji ILIKE pattern.value
+          OR meaning_vi ILIKE pattern.value
+          OR meaning_en ILIKE pattern.value
+      )
+    )
+    ORDER BY
+      match_rank ASC,
+      CHAR_LENGTH(word) ASC,
+      id ASC
     LIMIT $2
   `;
 
-  const { rows } = await pool.query(query, [searchPatterns, limit]);
+  const { rows } = await pool.query(query, [
+    cleanPatterns,
+    limit,
+    cleanExact,
+    prefixPatterns,
+  ]);
   return rows;
 }
 
-async function findKanjiContext(searchPatterns, limit) {
-  if (searchPatterns.length === 0) {
+async function findKanjiContext(searchPatterns, limit, kanjiChars = []) {
+  const cleanPatterns = Array.isArray(searchPatterns) ? searchPatterns.filter(Boolean) : [];
+  const cleanChars = Array.isArray(kanjiChars)
+    ? kanjiChars.map((c) => String(c || '').trim()).filter(Boolean)
+    : [];
+
+  if (cleanPatterns.length === 0 && cleanChars.length === 0) {
     return [];
   }
 
   const query = `
-    SELECT DISTINCT
+    SELECT
       id,
       kanji,
       onyomi,
@@ -220,34 +253,52 @@ async function findKanjiContext(searchPatterns, limit) {
       meaning_en AS "meaningEn",
       jlpt_level AS "jlptLevel",
       han_viet AS "hanViet",
-      mnemonic
+      mnemonic,
+      CASE
+        WHEN cardinality($3::text[]) > 0 AND kanji = ANY($3::text[]) THEN 0
+        ELSE 1
+      END AS match_rank
     FROM kanji
-    WHERE EXISTS (
-      SELECT 1
-      FROM unnest($1::text[]) AS pattern(value)
-      WHERE kanji ILIKE pattern.value
-        OR onyomi ILIKE pattern.value
-        OR kunyomi ILIKE pattern.value
-        OR meaning_vi ILIKE pattern.value
-        OR meaning_en ILIKE pattern.value
-        OR han_viet ILIKE pattern.value
+    WHERE (
+      cardinality($3::text[]) > 0
+      AND kanji = ANY($3::text[])
     )
-    ORDER BY "jlptLevel" DESC NULLS LAST, id ASC
+    OR (
+      cardinality($1::text[]) > 0
+      AND EXISTS (
+        SELECT 1
+        FROM unnest($1::text[]) AS pattern(value)
+        WHERE kanji ILIKE pattern.value
+          OR onyomi ILIKE pattern.value
+          OR kunyomi ILIKE pattern.value
+          OR meaning_vi ILIKE pattern.value
+          OR meaning_en ILIKE pattern.value
+          OR han_viet ILIKE pattern.value
+      )
+    )
+    ORDER BY
+      match_rank ASC,
+      id ASC
     LIMIT $2
   `;
 
-  const { rows } = await pool.query(query, [searchPatterns, limit]);
+  const { rows } = await pool.query(query, [cleanPatterns, limit, cleanChars]);
   return rows;
 }
 
-async function findGrammarContext(searchPatterns, limit) {
-  if (searchPatterns.length === 0) {
+async function findGrammarContext(searchPatterns, limit, exactTerms = []) {
+  const cleanPatterns = Array.isArray(searchPatterns) ? searchPatterns.filter(Boolean) : [];
+  const cleanExact = Array.isArray(exactTerms)
+    ? exactTerms.map((t) => String(t || '').trim()).filter(Boolean)
+    : [];
+
+  if (cleanPatterns.length === 0 && cleanExact.length === 0) {
     return [];
   }
 
   const query = `
     WITH matched_grammar AS (
-      SELECT DISTINCT
+      SELECT
         id,
         title,
         pattern,
@@ -255,7 +306,12 @@ async function findGrammarContext(searchPatterns, limit) {
         formation,
         explanation,
         usage_note AS "usageNote",
-        jlpt_level AS "jlptLevel"
+        jlpt_level AS "jlptLevel",
+        CASE
+          WHEN cardinality($3::text[]) > 0 AND (pattern ILIKE ANY($3::text[]) OR title ILIKE ANY($3::text[])) THEN 0
+          WHEN cardinality($1::text[]) > 0 AND (pattern ILIKE ANY($1::text[]) OR title ILIKE ANY($1::text[])) THEN 1
+          ELSE 2
+        END AS match_rank
       FROM grammar_points
       WHERE EXISTS (
         SELECT 1
@@ -263,11 +319,10 @@ async function findGrammarContext(searchPatterns, limit) {
         WHERE pattern ILIKE pattern_lookup.value
           OR title ILIKE pattern_lookup.value
           OR meaning_vi ILIKE pattern_lookup.value
-          OR formation ILIKE pattern_lookup.value
-          OR explanation ILIKE pattern_lookup.value
-          OR usage_note ILIKE pattern_lookup.value
       )
-      ORDER BY "jlptLevel" DESC NULLS LAST, id ASC
+      ORDER BY
+        match_rank ASC,
+        id ASC
       LIMIT $2
     )
     SELECT
@@ -279,10 +334,10 @@ async function findGrammarContext(searchPatterns, limit) {
     FROM matched_grammar
     LEFT JOIN grammar_examples
       ON grammar_examples.grammar_point_id = matched_grammar.id
-    ORDER BY matched_grammar.id ASC, grammar_examples.id ASC
+    ORDER BY matched_grammar.match_rank ASC, matched_grammar.id ASC, grammar_examples.id ASC
   `;
 
-  const { rows } = await pool.query(query, [searchPatterns, limit]);
+  const { rows } = await pool.query(query, [cleanPatterns, limit, cleanExact]);
   return rows;
 }
 
