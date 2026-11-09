@@ -6,7 +6,7 @@ import { DashboardNav } from '../../components/dashboard/dashboard-nav'
 import { useLessonDetail } from '../../hooks/use-lesson-detail'
 import { useLessonsProgress } from '../../hooks/use-lessons-progress'
 import { saveLessonQuiz } from '../../services/progress.service'
-import { normalizeLessonVocabulary } from '../../utils/lesson-vocabulary'
+import { getVocabularyExamples, normalizeLessonVocabulary } from '../../utils/lesson-vocabulary'
 import { lessonLevelMeta, lessonLevels } from './lesson-levels'
 import { LessonReadingSection } from './lesson-reading-section'
 import { LessonKanjiSection } from './lesson-kanji-section'
@@ -136,6 +136,33 @@ function playVocabularyWord(word) {
 
   window.speechSynthesis.cancel()
   window.speechSynthesis.speak(utterance)
+}
+
+function formatWordTypeLabel(wordType) {
+  const normalized = String(wordType || '').toLowerCase()
+  if (normalized.includes('verb')) return 'Động từ'
+  if (normalized.includes('i-adj')) return 'Tính từ đuôi い'
+  if (normalized.includes('na-adj')) return 'Tính từ đuôi な'
+  if (normalized.includes('adv')) return 'Phó từ'
+  if (normalized.includes('expression')) return 'Cụm từ / Biểu hiện'
+  if (normalized.includes('noun')) return 'Danh từ'
+  return 'Từ vựng'
+}
+
+function renderHighlightedSentence(sentence, targetWord) {
+  if (!sentence || !targetWord || !sentence.includes(targetWord)) {
+    return sentence
+  }
+
+  const parts = sentence.split(targetWord)
+  return parts.map((part, index) => (
+    <span key={`part-${index}`}>
+      {part}
+      {index < parts.length - 1 ? (
+        <mark className="lesson-vocab-example-highlight">{targetWord}</mark>
+      ) : null}
+    </span>
+  ))
 }
 
 function normalizeAnswer(value) {
@@ -568,6 +595,7 @@ export function LessonDetailPage() {
   const [quickSaveWord, setQuickSaveWord] = useState(null)
   const [vocabSearch, setVocabSearch] = useState('')
   const [vocabBatchIndex, setVocabBatchIndex] = useState(0)
+  const [selectedVocabWord, setSelectedVocabWord] = useState(null)
   const {
     lesson,
     isLoading,
@@ -598,6 +626,23 @@ export function LessonDetailPage() {
       )
     })
   }, [normalizedVocabulary, vocabSearch, vocabBatchIndex])
+  const activeVocabWord = useMemo(() => {
+    if (
+      selectedVocabWord
+      && normalizedVocabulary.some((w) => w.japanese === selectedVocabWord.japanese)
+    ) {
+      return selectedVocabWord
+    }
+    return filteredVocabulary[0] || normalizedVocabulary[0] || null
+  }, [selectedVocabWord, filteredVocabulary, normalizedVocabulary])
+  const activeVocabExamples = useMemo(
+    () => getVocabularyExamples(activeVocabWord, lesson?.grammar),
+    [activeVocabWord, lesson?.grammar],
+  )
+  const activeVocabIndexInFiltered = useMemo(() => {
+    if (!activeVocabWord) return -1
+    return filteredVocabulary.findIndex((w) => w.japanese === activeVocabWord.japanese)
+  }, [activeVocabWord, filteredVocabulary])
   const quizQuestions = useMemo(
     () => buildLessonQuiz(normalizedVocabulary, lesson?.grammar),
     [normalizedVocabulary, lesson?.grammar],
@@ -776,14 +821,14 @@ export function LessonDetailPage() {
 
         {/* View mode 2: Only Vocabulary */}
         {activeSection === 'vocabulary' ? (
-          <div className="lesson-detail-layout">
+          <div className="lesson-detail-layout lesson-detail-layout--vocabulary">
             <div className="lesson-detail-main-column">
               <section className="lesson-detail-card">
                 <div className="lesson-section-head">
                   <div>
                     <h2 className="lesson-section-title">Danh sách từ vựng bài học</h2>
                     <p className="lesson-reading-subtitle">
-                      Gồm {normalizedVocabulary.length} từ vựng chuẩn JLPT {level.toUpperCase()} kèm phiên âm Romaji, nghĩa tiếng Việt và phát âm.
+                      Gồm {normalizedVocabulary.length} từ vựng chuẩn JLPT {level.toUpperCase()}. Nhấn vào bất kỳ từ vựng nào để xem các câu ví dụ liên quan ở bảng bên phải.
                     </p>
                   </div>
                   <span className="lesson-badge-accent">{normalizedVocabulary.length} từ</span>
@@ -827,39 +872,76 @@ export function LessonDetailPage() {
                 </div>
 
                 <div className="lesson-vocabulary-grid-full">
-                  {filteredVocabulary.map((word, index) => (
-                    <article key={`vocab-full-${word.japanese}-${index}`} className="lesson-vocab-full-card">
-                      <div className="lesson-vocab-full-head">
-                        <div>
-                          <strong className="lesson-vocab-full-jp">{word.japanese}</strong>
-                          <div className="lesson-vocab-full-romaji">{word.romaji}</div>
+                  {filteredVocabulary.map((word, index) => {
+                    const isSelected = activeVocabWord?.japanese === word.japanese
+
+                    return (
+                      <article
+                        key={`vocab-full-${word.japanese}-${index}`}
+                        className={`lesson-vocab-full-card${isSelected ? ' is-selected' : ''}`}
+                        onClick={() => setSelectedVocabWord(word)}
+                        onKeyDown={(event) => {
+                          if (event.key === 'Enter' || event.key === ' ') {
+                            event.preventDefault()
+                            setSelectedVocabWord(word)
+                          }
+                        }}
+                        role="button"
+                        tabIndex={0}
+                        aria-pressed={isSelected}
+                      >
+                        <div className="lesson-vocab-full-head">
+                          <div>
+                            <strong className="lesson-vocab-full-jp">{word.japanese}</strong>
+                            {word.kana && word.kana !== word.japanese ? (
+                              <div className="lesson-vocab-full-kana">{word.kana}</div>
+                            ) : null}
+                            <div className="lesson-vocab-full-romaji">{word.romaji}</div>
+                          </div>
+
+                          <div className="lesson-vocabulary-actions">
+                            <button
+                              type="button"
+                              className="lesson-vocabulary-sound-btn"
+                              onClick={(event) => {
+                                event.stopPropagation()
+                                setSelectedVocabWord(word)
+                                playVocabularyWord(word)
+                              }}
+                              aria-label={`Nghe phát âm ${word.romaji}`}
+                              title="Nghe phát âm"
+                            >
+                              <VolumeIcon className="lesson-vocabulary-sound-icon" />
+                            </button>
+
+                            <button
+                              type="button"
+                              className="lesson-vocabulary-save-btn"
+                              onClick={(event) => {
+                                event.stopPropagation()
+                                setQuickSaveWord(word)
+                              }}
+                              aria-label={`Lưu "${word.japanese}" vào flashcard`}
+                              title="Lưu vào Flashcard"
+                            >
+                              <BookmarkIcon className="lesson-vocabulary-save-icon" />
+                            </button>
+                          </div>
                         </div>
 
-                        <div className="lesson-vocabulary-actions">
-                          <button
-                            type="button"
-                            className="lesson-vocabulary-sound-btn"
-                            onClick={() => playVocabularyWord(word)}
-                            aria-label={`Nghe phát âm ${word.romaji}`}
-                          >
-                            <VolumeIcon className="lesson-vocabulary-sound-icon" />
-                          </button>
+                        <p className="lesson-vocab-full-meaning">{word.meaningVi || word.english}</p>
 
-                          <button
-                            type="button"
-                            className="lesson-vocabulary-save-btn"
-                            onClick={() => setQuickSaveWord(word)}
-                            aria-label={`Lưu "${word.japanese}" vào flashcard`}
-                            title="Lưu vào Flashcard"
-                          >
-                            <BookmarkIcon className="lesson-vocabulary-save-icon" />
-                          </button>
+                        <div className="lesson-vocab-full-foot">
+                          <span className="lesson-vocab-type-pill">
+                            {formatWordTypeLabel(word.wordType)}
+                          </span>
+                          <span className="lesson-vocab-example-hint">
+                            {isSelected ? 'Đang xem câu ví dụ' : 'Xem câu ví dụ →'}
+                          </span>
                         </div>
-                      </div>
-
-                      <p className="lesson-vocab-full-meaning">{word.meaningVi || word.english}</p>
-                    </article>
-                  ))}
+                      </article>
+                    )
+                  })}
                 </div>
               </section>
 
@@ -870,9 +952,14 @@ export function LessonDetailPage() {
                     <p className="lesson-exercise-title">Viết mỗi từ vựng 5 lần</p>
                     <div className="lesson-word-chips">
                       {normalizedVocabulary.slice(0, 5).map((word) => (
-                        <span key={`chip-${word.japanese}`} className="lesson-word-chip">
+                        <button
+                          key={`chip-${word.japanese}`}
+                          type="button"
+                          className={`lesson-word-chip lesson-word-chip--interactive${activeVocabWord?.japanese === word.japanese ? ' is-selected' : ''}`}
+                          onClick={() => setSelectedVocabWord(word)}
+                        >
                           {word.japanese}
-                        </span>
+                        </button>
                       ))}
                     </div>
                   </article>
@@ -886,6 +973,141 @@ export function LessonDetailPage() {
                 </div>
               </section>
             </div>
+
+            <aside className="lesson-vocab-examples-aside" aria-label="Chi tiết từ vựng và câu ví dụ">
+              {activeVocabWord ? (
+                <section className="lesson-vocab-detail-panel">
+                  <div className="lesson-vocab-detail-top">
+                    <div className="lesson-vocab-detail-badges">
+                      <span className="lesson-vocab-detail-badge">
+                        {formatWordTypeLabel(activeVocabWord.wordType)}
+                      </span>
+                      <span className="lesson-vocab-detail-level">
+                        {(activeVocabWord.jlptLevel || level).toUpperCase()}
+                      </span>
+                    </div>
+
+                    <div className="lesson-vocab-detail-actions">
+                      <button
+                        type="button"
+                        className="lesson-vocab-detail-action-btn"
+                        onClick={() => playVocabularyWord(activeVocabWord)}
+                        title="Nghe phát âm từ vựng"
+                      >
+                        <VolumeIcon className="lesson-vocabulary-sound-icon" />
+                        <span>Nghe từ</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        className="lesson-vocab-detail-action-btn"
+                        onClick={() => setQuickSaveWord(activeVocabWord)}
+                        title="Lưu vào bộ thẻ Flashcard"
+                      >
+                        <BookmarkIcon className="lesson-vocabulary-save-icon" />
+                        <span>Lưu thẻ</span>
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="lesson-vocab-detail-hero">
+                    <div className="lesson-vocab-detail-jp">{activeVocabWord.japanese}</div>
+                    <div className="lesson-vocab-detail-readings">
+                      {activeVocabWord.kana && activeVocabWord.kana !== activeVocabWord.japanese ? (
+                        <span className="lesson-vocab-detail-kana">{activeVocabWord.kana}</span>
+                      ) : null}
+                      <span className="lesson-vocab-detail-romaji">{activeVocabWord.romaji}</span>
+                    </div>
+                    <p className="lesson-vocab-detail-meaning">
+                      {activeVocabWord.meaningVi || activeVocabWord.english}
+                    </p>
+                  </div>
+
+                  <div className="lesson-vocab-examples-section">
+                    <div className="lesson-vocab-examples-head">
+                      <h3>Câu ví dụ liên quan</h3>
+                      <span>{activeVocabExamples.length} câu ví dụ</span>
+                    </div>
+
+                    <div className="lesson-vocab-examples-list">
+                      {activeVocabExamples.map((example, idx) => (
+                        <article
+                          key={example.id || `vocab-ex-${idx}`}
+                          className="lesson-vocab-example-card"
+                        >
+                          <div className="lesson-vocab-example-card-head">
+                            <span className="lesson-vocab-example-num">Ví dụ {idx + 1}</span>
+                            <button
+                              type="button"
+                              className="lesson-vocab-example-sound-btn"
+                              onClick={() => playVocabularyWord({ japanese: example.exampleJp })}
+                              aria-label={`Nghe câu ví dụ ${idx + 1}`}
+                              title="Nghe phát âm cả câu"
+                            >
+                              <VolumeIcon className="lesson-vocabulary-sound-icon" />
+                              <span>Nghe câu</span>
+                            </button>
+                          </div>
+
+                          <p className="lesson-vocab-example-jp">
+                            {renderHighlightedSentence(example.exampleJp, activeVocabWord.japanese)}
+                          </p>
+
+                          {example.exampleKana ? (
+                            <p className="lesson-vocab-example-kana">{example.exampleKana}</p>
+                          ) : null}
+
+                          <p className="lesson-vocab-example-vi">{example.exampleVi}</p>
+                        </article>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="lesson-vocab-detail-footer">
+                    <div className="lesson-vocab-step-btns">
+                      <button
+                        type="button"
+                        className="lesson-vocab-step-btn"
+                        disabled={activeVocabIndexInFiltered <= 0}
+                        onClick={() => {
+                          if (activeVocabIndexInFiltered > 0) {
+                            setSelectedVocabWord(filteredVocabulary[activeVocabIndexInFiltered - 1])
+                          }
+                        }}
+                      >
+                        ← Từ trước
+                      </button>
+
+                      <button
+                        type="button"
+                        className="lesson-vocab-step-btn"
+                        disabled={
+                          activeVocabIndexInFiltered === -1
+                          || activeVocabIndexInFiltered >= filteredVocabulary.length - 1
+                        }
+                        onClick={() => {
+                          if (
+                            activeVocabIndexInFiltered !== -1
+                            && activeVocabIndexInFiltered < filteredVocabulary.length - 1
+                          ) {
+                            setSelectedVocabWord(filteredVocabulary[activeVocabIndexInFiltered + 1])
+                          }
+                        }}
+                      >
+                        Từ tiếp theo →
+                      </button>
+                    </div>
+
+                    <Link
+                      to={`/dictionary?q=${encodeURIComponent(activeVocabWord.japanese)}`}
+                      className="lesson-vocab-dict-link"
+                    >
+                      Tra cứu chi tiết "{activeVocabWord.japanese}" trong Từ điển →
+                    </Link>
+                  </div>
+                </section>
+              ) : null}
+            </aside>
           </div>
         ) : null}
 
@@ -1016,54 +1238,100 @@ export function LessonDetailPage() {
               <section className="lesson-vocabulary-card">
                 <div className="lesson-sidebar-head">
                   <h3>Từ vựng ({normalizedVocabulary.length})</h3>
-                  {normalizedVocabulary.length > 30 ? (
-                    <button
-                      type="button"
-                      className="lesson-sidebar-view-all-btn"
-                      onClick={() => handleTabChange('vocabulary')}
-                    >
-                      Mở rộng tất cả →
-                    </button>
-                  ) : null}
+                  <button
+                    type="button"
+                    className="lesson-sidebar-view-all-btn"
+                    onClick={() => handleTabChange('vocabulary')}
+                  >
+                    Mở rộng & Ví dụ →
+                  </button>
                 </div>
 
+                <p className="lesson-sidebar-subhint">
+                  Nhấn vào từ bất kỳ để xem nhanh câu ví dụ liên quan.
+                </p>
+
                 <div className="lesson-vocabulary-list">
-                  {normalizedVocabulary.slice(0, 30).map((word, index) => (
-                    <article
-                      key={`vocab-${word.japanese}-${index}`}
-                      className="lesson-vocabulary-item"
-                    >
-                      <div className="lesson-vocabulary-head">
-                        <div>
-                          <div className="lesson-vocabulary-japanese">{word.japanese}</div>
-                          <div className="lesson-vocabulary-romaji">{word.romaji}</div>
+                  {normalizedVocabulary.slice(0, 30).map((word, index) => {
+                    const isExpanded = selectedVocabWord?.japanese === word.japanese
+                    const itemExamples = isExpanded
+                      ? getVocabularyExamples(word, lesson?.grammar).slice(0, 2)
+                      : []
+
+                    return (
+                      <article
+                        key={`vocab-${word.japanese}-${index}`}
+                        className={`lesson-vocabulary-item lesson-vocabulary-item--interactive${isExpanded ? ' is-expanded' : ''}`}
+                        onClick={() =>
+                          setSelectedVocabWord((prev) =>
+                            prev?.japanese === word.japanese ? null : word,
+                          )
+                        }
+                      >
+                        <div className="lesson-vocabulary-head">
+                          <div>
+                            <div className="lesson-vocabulary-japanese">{word.japanese}</div>
+                            <div className="lesson-vocabulary-romaji">{word.romaji}</div>
+                          </div>
+
+                          <div className="lesson-vocabulary-actions">
+                            <button
+                              type="button"
+                              className="lesson-vocabulary-sound-btn"
+                              onClick={(event) => {
+                                event.stopPropagation()
+                                playVocabularyWord(word)
+                              }}
+                              aria-label={`Nghe phát âm ${word.romaji}`}
+                            >
+                              <VolumeIcon className="lesson-vocabulary-sound-icon" />
+                            </button>
+
+                            <button
+                              type="button"
+                              className="lesson-vocabulary-save-btn"
+                              onClick={(event) => {
+                                event.stopPropagation()
+                                setQuickSaveWord(word)
+                              }}
+                              aria-label={`Lưu "${word.japanese}" vào flashcard`}
+                              title="Lưu vào Flashcard"
+                            >
+                              <BookmarkIcon className="lesson-vocabulary-save-icon" />
+                            </button>
+                          </div>
                         </div>
 
-                        <div className="lesson-vocabulary-actions">
-                          <button
-                            type="button"
-                            className="lesson-vocabulary-sound-btn"
-                            onClick={() => playVocabularyWord(word)}
-                            aria-label={`Nghe phát âm ${word.romaji}`}
-                          >
-                            <VolumeIcon className="lesson-vocabulary-sound-icon" />
-                          </button>
+                        <p className="lesson-vocabulary-meaning">{word.meaningVi || word.english}</p>
 
-                          <button
-                            type="button"
-                            className="lesson-vocabulary-save-btn"
-                            onClick={() => setQuickSaveWord(word)}
-                            aria-label={`Lưu "${word.japanese}" vào flashcard`}
-                            title="Lưu vào Flashcard"
+                        {isExpanded && itemExamples.length > 0 ? (
+                          <div
+                            className="lesson-sidebar-inline-examples"
+                            onClick={(event) => event.stopPropagation()}
                           >
-                            <BookmarkIcon className="lesson-vocabulary-save-icon" />
-                          </button>
-                        </div>
-                      </div>
-
-                      <p className="lesson-vocabulary-meaning">{word.meaningVi || word.english}</p>
-                    </article>
-                  ))}
+                            {itemExamples.map((ex, exIdx) => (
+                              <div key={`side-ex-${exIdx}`} className="lesson-sidebar-inline-example">
+                                <p className="lesson-sidebar-inline-jp">
+                                  {renderHighlightedSentence(ex.exampleJp, word.japanese)}
+                                </p>
+                                <p className="lesson-sidebar-inline-vi">{ex.exampleVi}</p>
+                              </div>
+                            ))}
+                            <button
+                              type="button"
+                              className="lesson-sidebar-open-tab-btn"
+                              onClick={() => {
+                                setSelectedVocabWord(word)
+                                handleTabChange('vocabulary')
+                              }}
+                            >
+                              Xem đầy đủ ví dụ ở tab Từ vựng →
+                            </button>
+                          </div>
+                        ) : null}
+                      </article>
+                    )
+                  })}
                 </div>
               </section>
             </aside>

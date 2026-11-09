@@ -66,19 +66,35 @@ async function findLessonsByLevel(level) {
 async function findVocabularyByLesson(level, lessonNumber) {
   const query = `
     SELECT
-      id,
-      lesson_number AS "lessonNumber",
-      word,
-      kana,
-      romaji,
-      meaning_vi AS "meaningVi",
-      meaning_en AS "meaningEn",
-      word_type AS "wordType",
-      jlpt_level AS "jlptLevel"
+      vocabulary.id,
+      vocabulary.lesson_number AS "lessonNumber",
+      vocabulary.word,
+      vocabulary.kana,
+      vocabulary.romaji,
+      vocabulary.meaning_vi AS "meaningVi",
+      vocabulary.meaning_en AS "meaningEn",
+      vocabulary.word_type AS "wordType",
+      vocabulary.jlpt_level AS "jlptLevel",
+      COALESCE(
+        json_agg(
+          json_build_object(
+            'id', vocabulary_examples.id,
+            'exampleJp', vocabulary_examples.example_jp,
+            'exampleKana', COALESCE(vocabulary_examples.example_kana, ''),
+            'exampleVi', COALESCE(vocabulary_examples.example_vi, ''),
+            'audioUrl', COALESCE(vocabulary_examples.audio_url, '')
+          )
+          ORDER BY vocabulary_examples.id ASC
+        ) FILTER (WHERE vocabulary_examples.id IS NOT NULL),
+        '[]'::json
+      ) AS examples
     FROM vocabulary
-    WHERE lesson_number = $1
-      AND LOWER(jlpt_level) = LOWER($2)
-    ORDER BY id ASC
+    LEFT JOIN vocabulary_examples
+      ON vocabulary_examples.vocabulary_id = vocabulary.id
+    WHERE vocabulary.lesson_number = $1
+      AND LOWER(vocabulary.jlpt_level) = LOWER($2)
+    GROUP BY vocabulary.id
+    ORDER BY vocabulary.id ASC
   `;
 
   const { rows } = await pool.query(query, [lessonNumber, level]);
