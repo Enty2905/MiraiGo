@@ -17,6 +17,8 @@ async function findLessonsByLevel(level) {
       SELECT
         id AS "lessonId",
         slug,
+        title,
+        description,
         (SUBSTRING(slug FROM '-l([0-9]+)$'))::int AS "lessonNumber"
       FROM lessons
       WHERE LOWER(jlpt_level) = LOWER($1)
@@ -27,6 +29,8 @@ async function findLessonsByLevel(level) {
       SELECT
         lessons.id AS "lessonId",
         vocabulary_lessons.slug,
+        lessons.title,
+        lessons.description,
         vocabulary_lessons."lessonNumber"
       FROM vocabulary_lessons
       LEFT JOIN lessons
@@ -34,14 +38,19 @@ async function findLessonsByLevel(level) {
     )
     SELECT
       lesson_rows."lessonNumber",
+      MAX(lesson_rows.title) AS title,
+      MAX(lesson_rows.description) AS description,
       COALESCE(vocabulary_lessons."vocabularyCount", 0)::int AS "vocabularyCount",
       vocabulary_lessons."sampleWord",
-      COALESCE(COUNT(DISTINCT lesson_grammar_points.grammar_point_id), 0)::int AS "grammarCount"
+      COALESCE(COUNT(DISTINCT lesson_grammar_points.grammar_point_id), 0)::int AS "grammarCount",
+      ARRAY_REMOVE(ARRAY_AGG(DISTINCT grammar_points.pattern), NULL) AS "grammarPatterns"
     FROM lesson_rows
     LEFT JOIN vocabulary_lessons
       ON vocabulary_lessons.slug = lesson_rows.slug
     LEFT JOIN lesson_grammar_points
       ON lesson_grammar_points.lesson_id = lesson_rows."lessonId"
+    LEFT JOIN grammar_points
+      ON grammar_points.id = lesson_grammar_points.grammar_point_id
     WHERE lesson_rows."lessonNumber" IS NOT NULL
     GROUP BY
       lesson_rows."lessonNumber",
@@ -113,8 +122,28 @@ async function findGrammarByLesson(level, lessonNumber) {
   return rows;
 }
 
+async function findLessonMetadata(level, lessonNumber) {
+  const lessonSlug = `${level.toLowerCase()}-l${lessonNumber}`;
+  const query = `
+    SELECT
+      id,
+      title,
+      slug,
+      description,
+      content,
+      jlpt_level AS "jlptLevel"
+    FROM lessons
+    WHERE slug = $1
+    LIMIT 1
+  `;
+
+  const { rows } = await pool.query(query, [lessonSlug]);
+  return rows[0] || null;
+}
+
 module.exports = {
   findGrammarByLesson,
+  findLessonMetadata,
   findLessonsByLevel,
   findVocabularyByLesson,
 };

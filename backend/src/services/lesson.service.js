@@ -1,5 +1,6 @@
 const {
   findGrammarByLesson,
+  findLessonMetadata,
   findLessonsByLevel,
   findVocabularyByLesson,
 } = require('../models/vocabulary.model');
@@ -100,25 +101,29 @@ function buildLessonSummary(level, row) {
   return {
     id: createLessonId(level, row.lessonNumber),
     lessonNumber: row.lessonNumber,
-    title: `Bài ${row.lessonNumber}`,
-    description: createLessonDescription(
-      level,
-      row.lessonNumber,
-      row.vocabularyCount,
-      row.grammarCount,
-    ),
+    title: row.title || `Bài ${row.lessonNumber}`,
+    description:
+      row.description ||
+      createLessonDescription(
+        level,
+        row.lessonNumber,
+        row.vocabularyCount,
+        row.grammarCount,
+      ),
     estimatedTime,
     vocabularyCount: row.vocabularyCount,
     grammarCount: row.grammarCount || 0,
-    grammar: [],
-    // Temporary fallback until kanji are mapped by lesson.
+    grammar: Array.isArray(row.grammarPatterns) ? row.grammarPatterns : [],
     kanji: row.sampleWord ? [row.sampleWord] : [],
   };
 }
 
-function buildLessonContent(lessonNumber, vocabularyItems, grammarItems) {
+function buildLessonContent(lessonNumber, vocabularyItems, grammarItems, lessonMeta) {
+  const heading = lessonMeta?.title || `Bài ${lessonNumber}`;
+  const intro =
+    lessonMeta?.description || 'Luyện từ vựng và ngữ pháp trọng tâm của bài.';
   const sampleWords = vocabularyItems
-    .slice(0, 5)
+    .slice(0, 6)
     .map((item) => `- ${item.japanese} (${item.romaji}): ${item.meaningVi || item.english}`)
     .join('\n');
   const sampleGrammar = grammarItems
@@ -126,7 +131,7 @@ function buildLessonContent(lessonNumber, vocabularyItems, grammarItems) {
     .map((item) => `- ${item.pattern}: ${item.meaningVi}`)
     .join('\n');
 
-  return `# Bài ${lessonNumber}\nLuyện từ vựng và ngữ pháp trọng tâm của bài.\n\n## Từ vựng\n${sampleWords}\n\n## Ngữ pháp\n${sampleGrammar || 'Chưa có mẫu ngữ pháp được liên kết.'}`;
+  return `# ${heading}\n${intro}\n\n## Từ vựng tiêu biểu\n${sampleWords}\n\n## Ngữ pháp trọng tâm\n${sampleGrammar || 'Chưa có mẫu ngữ pháp được liên kết.'}`;
 }
 
 async function getLessonsByLevel(levelInput) {
@@ -145,9 +150,10 @@ function extractKanjiCharacters(text) {
 async function getLessonByLevelAndNumber(levelInput, lessonNumberInput) {
   const level = normalizeLevel(levelInput);
   const lessonNumber = normalizeLessonNumber(lessonNumberInput);
-  const [vocabularyRows, grammarRows] = await Promise.all([
+  const [vocabularyRows, grammarRows, lessonMeta] = await Promise.all([
     findVocabularyByLesson(level.toUpperCase(), lessonNumber),
     findGrammarByLesson(level.toUpperCase(), lessonNumber),
+    findLessonMetadata(level.toUpperCase(), lessonNumber),
   ]);
 
   if (vocabularyRows.length === 0 && grammarRows.length === 0) {
@@ -159,7 +165,7 @@ async function getLessonByLevelAndNumber(levelInput, lessonNumberInput) {
 
   const kanjiChars = extractKanjiCharacters(
     vocabulary.map((item) => item.japanese).join(''),
-  );
+  ).slice(0, 28);
   let kanjiList = [];
   if (kanjiChars.length > 0) {
     try {
@@ -206,8 +212,10 @@ async function getLessonByLevelAndNumber(levelInput, lessonNumberInput) {
   return {
     id: createLessonId(level, lessonNumber),
     lessonNumber,
-    title: `Bài ${lessonNumber}`,
-    description: createLessonDescription(level, lessonNumber, vocabulary.length, grammar.length),
+    title: lessonMeta?.title || `Bài ${lessonNumber}`,
+    description:
+      lessonMeta?.description ||
+      createLessonDescription(level, lessonNumber, vocabulary.length, grammar.length),
     estimatedTime: Math.max(
       12,
       Math.min(45, Math.round(vocabulary.length * 1.2 + grammar.length * 3)),
@@ -218,7 +226,7 @@ async function getLessonByLevelAndNumber(levelInput, lessonNumberInput) {
     grammarSummary: grammar.slice(0, 8).map((item) => `${item.pattern} - ${item.meaningVi}`),
     kanji: kanjiList.length > 0 ? kanjiList.map((k) => k.kanji) : vocabulary.slice(0, 8).map((item) => item.japanese),
     kanjiList,
-    content: buildLessonContent(lessonNumber, vocabulary, grammar),
+    content: buildLessonContent(lessonNumber, vocabulary, grammar, lessonMeta),
   };
 }
 
