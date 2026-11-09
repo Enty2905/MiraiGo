@@ -68,10 +68,87 @@
   background: var(--accent);
 }
 
+.lessons-controls-bar {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+}
+
 .lessons-level-tabs {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
+}
+
+.lessons-search-box {
+  flex: 1 1 280px;
+  max-width: 380px;
+}
+
+.lessons-search-input {
+  width: 100%;
+  box-sizing: border-box;
+  border-radius: 10px;
+  border: 1px solid var(--stroke);
+  background: var(--panel-bg);
+  color: var(--text-main);
+  padding: 9px 14px;
+  font: inherit;
+  font-size: 14px;
+  outline: none;
+  transition: border-color 0.15s ease;
+}
+
+.lessons-search-input:focus {
+  border-color: var(--text-muted);
+  outline: none;
+}
+
+.lessons-stage-tabs {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 8px;
+}
+
+.lessons-stage-tab {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  text-align: left;
+  border: 1px solid var(--surface-inset);
+  border-radius: 10px;
+  background: var(--panel-bg);
+  color: var(--text-main);
+  padding: 10px 14px;
+  font-family: inherit;
+  cursor: pointer;
+  transition: border-color 0.15s ease, background 0.15s ease;
+}
+
+.lessons-stage-tab strong {
+  font-size: 13.5px;
+  font-weight: 700;
+}
+
+.lessons-stage-tab span {
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.lessons-stage-tab:hover {
+  border-color: var(--stroke);
+}
+
+.lessons-stage-tab.is-active {
+  border-color: var(--accent);
+  background: var(--surface-inset);
+}
+
+.lessons-stage-tab.is-active strong {
+  color: var(--accent);
 }
 
 .lessons-level-tab {
@@ -214,10 +291,44 @@
   text-transform: uppercase;
 }
 
+.lesson-card-stage-pill {
+  display: inline-block;
+  font-size: 11.5px;
+  font-weight: 700;
+  letter-spacing: 0.4px;
+  text-transform: uppercase;
+  color: var(--accent);
+  margin-bottom: 4px;
+}
+
 .lesson-status-badge--done {
   color: #1b5e20;
   background: #e8f5e9;
   border: 1px solid #c8e6c9;
+}
+
+.lesson-status-badge--ready {
+  color: var(--text-muted);
+  background: var(--surface-inset);
+  border: 1px solid var(--stroke);
+}
+
+.lesson-card-grammar-chips {
+  margin-top: 10px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.lesson-card-grammar-chip {
+  display: inline-block;
+  border-radius: 6px;
+  padding: 3px 9px;
+  font-size: 12.5px;
+  font-weight: 600;
+  background: var(--surface-inset);
+  color: var(--text-main);
+  border: 1px solid var(--stroke);
 }
 
 .lesson-status-badge--locked {
@@ -447,6 +558,103 @@
 
 .lessons-main--detail {
   gap: 16px;
+}
+
+.lesson-detail-top-nav {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+}
+
+.lesson-prev-next-group {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.lesson-step-indicator {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text-muted);
+  padding: 0 4px;
+}
+
+.lesson-step-nav-btn {
+  text-decoration: none;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-main);
+  background: var(--panel-bg);
+  border: 1px solid var(--stroke);
+  border-radius: 8px;
+  padding: 6px 12px;
+  transition: border-color 0.15s ease, background 0.15s ease;
+}
+
+.lesson-step-nav-btn:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.lesson-vocab-toolbar {
+  margin: 16px 0 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.lesson-vocab-batch-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.lesson-vocab-batch-btn {
+  border: 1px solid var(--stroke);
+  background: var(--panel-bg);
+  color: var(--text-muted);
+  border-radius: 8px;
+  padding: 6px 12px;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.lesson-vocab-batch-btn:hover {
+  border-color: var(--accent);
+  color: var(--text-main);
+}
+
+.lesson-vocab-batch-btn.is-active {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--on-accent);
+}
+
+.lesson-sidebar-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+}
+
+.lesson-sidebar-view-all-btn {
+  border: none;
+  background: transparent;
+  color: var(--accent);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 2px 4px;
+}
+
+.lesson-sidebar-view-all-btn:hover {
+  text-decoration: underline;
 }
 
 .lesson-back-link {

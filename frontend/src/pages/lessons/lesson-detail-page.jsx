@@ -566,6 +566,8 @@ export function LessonDetailPage() {
   const [isCompleting, setIsCompleting] = useState(false)
   const [completeErrorMessage, setCompleteErrorMessage] = useState('')
   const [quickSaveWord, setQuickSaveWord] = useState(null)
+  const [vocabSearch, setVocabSearch] = useState('')
+  const [vocabBatchIndex, setVocabBatchIndex] = useState(0)
   const {
     lesson,
     isLoading,
@@ -575,6 +577,27 @@ export function LessonDetailPage() {
     () => normalizeLessonVocabulary(lesson?.vocabulary),
     [lesson],
   )
+  const VOCAB_BATCH_SIZE = 30
+  const vocabBatchesCount = Math.ceil(normalizedVocabulary.length / VOCAB_BATCH_SIZE)
+  const filteredVocabulary = useMemo(() => {
+    const q = vocabSearch.trim().toLowerCase()
+    if (!q) {
+      if (vocabBatchIndex === -1 || normalizedVocabulary.length <= 35) {
+        return normalizedVocabulary
+      }
+      const start = vocabBatchIndex * VOCAB_BATCH_SIZE
+      return normalizedVocabulary.slice(start, start + VOCAB_BATCH_SIZE)
+    }
+    return normalizedVocabulary.filter((w) => {
+      return (
+        (w.japanese || '').toLowerCase().includes(q)
+        || (w.kana || '').toLowerCase().includes(q)
+        || (w.romaji || '').toLowerCase().includes(q)
+        || (w.meaningVi || '').toLowerCase().includes(q)
+        || (w.english || '').toLowerCase().includes(q)
+      )
+    })
+  }, [normalizedVocabulary, vocabSearch, vocabBatchIndex])
   const quizQuestions = useMemo(
     () => buildLessonQuiz(normalizedVocabulary, lesson?.grammar),
     [normalizedVocabulary, lesson?.grammar],
@@ -586,34 +609,6 @@ export function LessonDetailPage() {
 
   if (!Number.isInteger(parsedLessonNumber) || parsedLessonNumber <= 0) {
     return <Navigate to={`/lessons/${level}`} replace />
-  }
-
-  const previousLessonId = `${level}-l${parsedLessonNumber - 1}`
-  const isLocked =
-    !isLoading &&
-    !isProgressLoading &&
-    !errorMessage &&
-    !progressErrorMessage &&
-    Boolean(lesson) &&
-    parsedLessonNumber > 1 &&
-    !completedLessons.has(previousLessonId)
-
-  if (isLocked) {
-    return (
-      <div className="lessons-page">
-        <DashboardNav navItems={NAV_ITEMS} />
-
-        <main className="lessons-main" id="main-content" tabIndex={-1}>
-          <section className="lesson-detail-card">
-            <h1>Bài học đang bị khóa</h1>
-            <p>Hãy hoàn thành bài trước trước khi mở bài này.</p>
-            <Link to={`/lessons/${level}`} className="lesson-primary-btn">
-              Quay lại bài học {level.toUpperCase()}
-            </Link>
-          </section>
-        </main>
-      </div>
-    )
   }
 
   if (isLoading || isProgressLoading) {
@@ -693,11 +688,35 @@ export function LessonDetailPage() {
       <DashboardNav navItems={NAV_ITEMS} />
 
       <main className="lessons-main lessons-main--detail" id="main-content" tabIndex={-1}>
-        <div>
+        <div className="lesson-detail-top-nav">
           <Link to={`/lessons/${level}`} className="lesson-back-link">
             <ArrowLeftIcon className="lesson-back-icon" />
-            Quay lại danh sách bài học
+            Quay lại danh sách 25 bài học {level.toUpperCase()}
           </Link>
+
+          <div className="lesson-prev-next-group">
+            {parsedLessonNumber > 1 ? (
+              <Link
+                to={`/lessons/${level}/${parsedLessonNumber - 1}`}
+                className="lesson-step-nav-btn"
+              >
+                ← Bài {parsedLessonNumber - 1}
+              </Link>
+            ) : null}
+
+            <span className="lesson-step-indicator">
+              Bài {parsedLessonNumber} / 25
+            </span>
+
+            {parsedLessonNumber < 25 ? (
+              <Link
+                to={`/lessons/${level}/${parsedLessonNumber + 1}`}
+                className="lesson-step-nav-btn lesson-step-nav-btn--next"
+              >
+                Bài {parsedLessonNumber + 1} →
+              </Link>
+            ) : null}
+          </div>
         </div>
 
         <section className={`lessons-hero lessons-hero--${levelMeta.gradientClass}`}>
@@ -764,14 +783,51 @@ export function LessonDetailPage() {
                   <div>
                     <h2 className="lesson-section-title">Danh sách từ vựng bài học</h2>
                     <p className="lesson-reading-subtitle">
-                      Gồm {normalizedVocabulary.length} từ vựng mới kèm phiên âm Romaji, nghĩa tiếng Việt và âm thanh chuẩn.
+                      Gồm {normalizedVocabulary.length} từ vựng chuẩn JLPT {level.toUpperCase()} kèm phiên âm Romaji, nghĩa tiếng Việt và phát âm.
                     </p>
                   </div>
                   <span className="lesson-badge-accent">{normalizedVocabulary.length} từ</span>
                 </div>
 
+                <div className="lesson-vocab-toolbar">
+                  <input
+                    type="search"
+                    className="lessons-search-input"
+                    placeholder="Tìm nhanh từ vựng, cách đọc hoặc nghĩa trong bài..."
+                    value={vocabSearch}
+                    onChange={(event) => setVocabSearch(event.target.value)}
+                    aria-label="Tìm kiếm từ vựng trong bài"
+                  />
+
+                  {normalizedVocabulary.length > 35 && !vocabSearch.trim() ? (
+                    <div className="lesson-vocab-batch-tabs" role="tablist" aria-label="Chia đợt từ vựng">
+                      {Array.from({ length: vocabBatchesCount }, (_, idx) => {
+                        const startNum = idx * VOCAB_BATCH_SIZE + 1
+                        const endNum = Math.min((idx + 1) * VOCAB_BATCH_SIZE, normalizedVocabulary.length)
+                        return (
+                          <button
+                            key={`batch-${idx}`}
+                            type="button"
+                            className={`lesson-vocab-batch-btn${vocabBatchIndex === idx ? ' is-active' : ''}`}
+                            onClick={() => setVocabBatchIndex(idx)}
+                          >
+                            Đợt {idx + 1} ({startNum}–{endNum})
+                          </button>
+                        )
+                      })}
+                      <button
+                        type="button"
+                        className={`lesson-vocab-batch-btn${vocabBatchIndex === -1 ? ' is-active' : ''}`}
+                        onClick={() => setVocabBatchIndex(-1)}
+                      >
+                        Xem tất cả ({normalizedVocabulary.length})
+                      </button>
+                    </div>
+                  ) : null}
+                </div>
+
                 <div className="lesson-vocabulary-grid-full">
-                  {normalizedVocabulary.map((word, index) => (
+                  {filteredVocabulary.map((word, index) => (
                     <article key={`vocab-full-${word.japanese}-${index}`} className="lesson-vocab-full-card">
                       <div className="lesson-vocab-full-head">
                         <div>
@@ -958,10 +1014,21 @@ export function LessonDetailPage() {
 
             <aside className="lesson-vocabulary-sidebar">
               <section className="lesson-vocabulary-card">
-                <h3>Từ vựng</h3>
+                <div className="lesson-sidebar-head">
+                  <h3>Từ vựng ({normalizedVocabulary.length})</h3>
+                  {normalizedVocabulary.length > 30 ? (
+                    <button
+                      type="button"
+                      className="lesson-sidebar-view-all-btn"
+                      onClick={() => handleTabChange('vocabulary')}
+                    >
+                      Mở rộng tất cả →
+                    </button>
+                  ) : null}
+                </div>
 
                 <div className="lesson-vocabulary-list">
-                  {normalizedVocabulary.map((word, index) => (
+                  {normalizedVocabulary.slice(0, 30).map((word, index) => (
                     <article
                       key={`vocab-${word.japanese}-${index}`}
                       className="lesson-vocabulary-item"
